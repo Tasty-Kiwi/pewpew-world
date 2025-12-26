@@ -10,7 +10,7 @@ def run():
     import requests
     from loguru import logger
 
-    base_url = "https://raw.githubusercontent.com/pewpewlive/ppl-data/masters/"
+    base_url = "https://raw.githubusercontent.com/pewpewlive/ppl-data/master/"
     files = ["account_data.csv", "level_data.csv", "score_data.csv"]
 
     data_dir = os.path.dirname(os.path.dirname(__file__))
