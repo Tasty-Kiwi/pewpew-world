@@ -1,0 +1,14 @@
+{
+  "formatter": {
+    "python": {
+      "command": [
+        "black",
+        "$FILE"
+      ],
+      "extensions": [
+        ".py"
+      ]
+    }
+  },
+  "$schema": "https://opencode.ai/config.json"
+}

@@ -1,0 +1,6 @@
+[
+    {
+        "module": "modules.monthly_leaderboard",
+        "cron": "* * * * *"
+    }
+]
