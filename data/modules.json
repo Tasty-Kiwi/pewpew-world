@@ -5,10 +5,14 @@
     },
     {
         "module": "modules.monthly_lb_monthly",
-        "cron": "1 1 1 1 1"
+        "cron": "* * * * *"
     },
     {
         "module": "modules.monthly_lb_daily",
+        "cron": "* * * * *"
+    },
+    {
+        "module": "modules.quests_archive",
         "cron": "* * * * *"
     }
 ]
