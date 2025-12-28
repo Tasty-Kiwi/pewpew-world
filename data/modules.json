@@ -14,5 +14,9 @@
     {
         "module": "modules.quests_archive",
         "cron": "* * * * *"
+    },
+    {
+        "module": "modules.xp_lb_archive",
+        "cron": "* * * * *"
     }
 ]
