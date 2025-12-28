@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -120,6 +120,25 @@ class UsernameChange(BaseModel):
 class UsernameChangeHistoryResponse(BaseModel):
     player_uuid: str
     changes: List[UsernameChange]
+
+
+class PlayerLevelScore(BaseModel):
+    player_uuid: str
+    score: int
+    level_version: int
+    value_type: int
+    timestamp: float
+    country: str
+
+
+class LevelScoresGroup(BaseModel):
+    level_uuid: str
+    scores: List[PlayerLevelScore]
+
+
+class ComparisonResponse(BaseModel):
+    players: List[str]
+    levels: List[LevelScoresGroup]
 
 
 @router.get(
@@ -559,3 +578,94 @@ async def get_username_change_history(uuid: str):
             previous_name = current_name
 
     return UsernameChangeHistoryResponse(player_uuid=uuid, changes=changes)
+
+
+@router.get(
+    "/comparison/get_scores_by_level",
+    summary="Compare player scores by level",
+    description="Retrieves latest scores for specified players grouped by level",
+    tags=["comparison"],
+    response_model=ComparisonResponse,
+)
+async def compare_scores_by_level(
+    player_uuids: List[str] = Query(..., description="List of player UUIDs to compare")
+):
+    base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
+    score_data_path = base_path / "github_data/score_data.csv"
+
+    level_versions = {}
+
+    with open(score_data_path, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            level_uuid = row["level_uuid"]
+            level_version = int(row["level_version"])
+
+            if (
+                level_uuid not in level_versions
+                or level_version > level_versions[level_uuid]
+            ):
+                level_versions[level_uuid] = level_version
+
+    player_scores = {}
+
+    with open(score_data_path, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            player_uuid = row["account_ids"]
+
+            if player_uuid not in player_uuids:
+                continue
+
+            level_uuid = row["level_uuid"]
+            level_version = int(row["level_version"])
+
+            if level_version != level_versions[level_uuid]:
+                continue
+
+            score = int(row["value"])
+            value_type = int(row["value_type"])
+            timestamp = float(row["date"])
+            country = row["country"]
+
+            key = (player_uuid, level_uuid)
+
+            if key not in player_scores or timestamp > player_scores[key]["timestamp"]:
+                player_scores[key] = {
+                    "score": score,
+                    "level_version": level_version,
+                    "value_type": value_type,
+                    "timestamp": timestamp,
+                    "country": country,
+                }
+
+    level_groups = {}
+
+    for (player_uuid, level_uuid), score_data in player_scores.items():
+        if level_uuid not in level_groups:
+            level_groups[level_uuid] = []
+
+        level_groups[level_uuid].append(
+            PlayerLevelScore(
+                player_uuid=player_uuid,
+                score=score_data["score"],
+                level_version=score_data["level_version"],
+                value_type=score_data["value_type"],
+                timestamp=score_data["timestamp"],
+                country=score_data["country"],
+            )
+        )
+
+    levels_sorted = sorted(level_groups.keys())
+
+    levels = [
+        LevelScoresGroup(
+            level_uuid=level_uuid,
+            scores=sorted(
+                level_groups[level_uuid], key=lambda x: x.score, reverse=True
+            ),
+        )
+        for level_uuid in levels_sorted
+    ]
+
+    return ComparisonResponse(players=player_uuids, levels=levels)
