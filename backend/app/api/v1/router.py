@@ -99,6 +99,19 @@ class PlayerBlitzHistoryResponse(BaseModel):
     history: List[PlayerBlitzHistoryPoint]
 
 
+class LeaderboardPlacement(BaseModel):
+    timestamp: float
+    placement: Optional[int]
+    not_found: bool
+
+
+class PlayerLeaderboardPlacementsResponse(BaseModel):
+    player_uuid: str
+    monthly_leaderboard: LeaderboardPlacement
+    xp_leaderboard: LeaderboardPlacement
+    blitz_leaderboard: LeaderboardPlacement
+
+
 @router.get(
     "/",
     summary="Root endpoint",
@@ -420,3 +433,73 @@ async def get_player_blitz_history(uuid: str, sample_rate: int = 1):
     sampled_entries = all_entries[::sample_rate]
 
     return PlayerBlitzHistoryResponse(player_uuid=uuid, history=sampled_entries)
+
+
+@router.get(
+    "/player/{uuid}/get_leaderboard_placements",
+    summary="Get player leaderboard placements",
+    description="Retrieves player's placement on monthly, XP, and Blitz leaderboards",
+    tags=["player"],
+    response_model=PlayerLeaderboardPlacementsResponse,
+)
+async def get_player_leaderboard_placements(uuid: str):
+    base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
+
+    monthly_placement = LeaderboardPlacement(timestamp=0.0, placement=None, not_found=True)
+    xp_placement = LeaderboardPlacement(timestamp=0.0, placement=None, not_found=True)
+    blitz_placement = LeaderboardPlacement(timestamp=0.0, placement=None, not_found=True)
+
+    leaderboard_path = base_path / "monthly_lb_daily/leaderboard.csv"
+    metadata_path = base_path / "github_data/metadata.json"
+
+    if leaderboard_path.exists():
+        with open(leaderboard_path, "r") as f:
+            reader = csv.DictReader(f)
+            for index, row in enumerate(reader):
+                if row["player_uuid"] == uuid:
+                    monthly_placement = LeaderboardPlacement(
+                        timestamp=0.0, placement=index + 1, not_found=False
+                    )
+                    break
+
+    if metadata_path.exists():
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+            monthly_placement.timestamp = metadata.get("timestamp", 0.0)
+
+    xp_archive_dir = base_path / "xp_lb_archive"
+    if xp_archive_dir.exists():
+        xp_files = sorted(xp_archive_dir.glob("xp_lb_*.json"))
+        if xp_files:
+            latest_xp_file = xp_files[-1]
+            with open(latest_xp_file, "r") as f:
+                xp_archive = json.load(f)
+            latest_xp_entry = max(xp_archive, key=lambda x: x.get("timestamp", 0))
+            xp_placement.timestamp = latest_xp_entry.get("timestamp", 0.0)
+            for index, player in enumerate(latest_xp_entry.get("data", [])):
+                if player.get("acc") == uuid:
+                    xp_placement.placement = index + 1
+                    xp_placement.not_found = False
+                    break
+
+    blitz_archive_dir = base_path / "blitz_lb_archive"
+    if blitz_archive_dir.exists():
+        blitz_files = sorted(blitz_archive_dir.glob("blitz_lb_*.json"))
+        if blitz_files:
+            latest_blitz_file = blitz_files[-1]
+            with open(latest_blitz_file, "r") as f:
+                blitz_archive = json.load(f)
+            latest_blitz_entry = max(blitz_archive, key=lambda x: x.get("timestamp", 0))
+            blitz_placement.timestamp = latest_blitz_entry.get("timestamp", 0.0)
+            for index, player in enumerate(latest_blitz_entry.get("data", [])):
+                if player.get("acc") == uuid:
+                    blitz_placement.placement = index + 1
+                    blitz_placement.not_found = False
+                    break
+
+    return PlayerLeaderboardPlacementsResponse(
+        player_uuid=uuid,
+        monthly_leaderboard=monthly_placement,
+        xp_leaderboard=xp_placement,
+        blitz_leaderboard=blitz_placement,
+    )
