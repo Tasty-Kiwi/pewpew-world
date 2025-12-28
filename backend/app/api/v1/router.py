@@ -79,6 +79,26 @@ class QuestResponse(BaseModel):
     data: QuestData
 
 
+class PlayerXPHistoryPoint(BaseModel):
+    timestamp: float
+    xp: int
+
+
+class PlayerXPHistoryResponse(BaseModel):
+    player_uuid: str
+    history: List[PlayerXPHistoryPoint]
+
+
+class PlayerBlitzHistoryPoint(BaseModel):
+    timestamp: float
+    bsr: int
+
+
+class PlayerBlitzHistoryResponse(BaseModel):
+    player_uuid: str
+    history: List[PlayerBlitzHistoryPoint]
+
+
 @router.get(
     "/",
     summary="Root endpoint",
@@ -324,3 +344,79 @@ async def get_archived_quests(year: int, month: int, day: int):
     raise HTTPException(
         status_code=404, detail=f"No quests found for {year}/{month}/{day}"
     )
+
+
+@router.get(
+    "/player/{uuid}/get_xp_history",
+    summary="Get player XP history",
+    description="Retrieves XP value history for a specific player across all archive files",
+    tags=["player"],
+    response_model=PlayerXPHistoryResponse,
+)
+async def get_player_xp_history(uuid: str, sample_rate: int = 1):
+    if sample_rate < 1:
+        raise HTTPException(status_code=400, detail="Sample rate must be at least 1")
+
+    base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
+    xp_archive_dir = base_path / "xp_lb_archive"
+
+    all_entries = []
+
+    for archive_file in sorted(xp_archive_dir.glob("xp_lb_*.json")):
+        with open(archive_file, "r") as f:
+            archive = json.load(f)
+
+        for entry in archive:
+            timestamp = entry.get("timestamp", 0)
+            for player in entry.get("data", []):
+                if player.get("acc") == uuid:
+                    all_entries.append(
+                        PlayerXPHistoryPoint(
+                            timestamp=timestamp, xp=int(player.get("xp", 0))
+                        )
+                    )
+                    break
+
+    all_entries.sort(key=lambda x: x.timestamp)
+
+    sampled_entries = all_entries[::sample_rate]
+
+    return PlayerXPHistoryResponse(player_uuid=uuid, history=sampled_entries)
+
+
+@router.get(
+    "/player/{uuid}/get_blitz_history",
+    summary="Get player blitz history",
+    description="Retrieves blitz rating history for a specific player across all archive files",
+    tags=["player"],
+    response_model=PlayerBlitzHistoryResponse,
+)
+async def get_player_blitz_history(uuid: str, sample_rate: int = 1):
+    if sample_rate < 1:
+        raise HTTPException(status_code=400, detail="Sample rate must be at least 1")
+
+    base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
+    blitz_archive_dir = base_path / "blitz_lb_archive"
+
+    all_entries = []
+
+    for archive_file in sorted(blitz_archive_dir.glob("blitz_lb_*.json")):
+        with open(archive_file, "r") as f:
+            archive = json.load(f)
+
+        for entry in archive:
+            timestamp = entry.get("timestamp", 0)
+            for player in entry.get("data", []):
+                if player.get("acc") == uuid:
+                    all_entries.append(
+                        PlayerBlitzHistoryPoint(
+                            timestamp=timestamp, bsr=int(player.get("bsr", 0))
+                        )
+                    )
+                    break
+
+    all_entries.sort(key=lambda x: x.timestamp)
+
+    sampled_entries = all_entries[::sample_rate]
+
+    return PlayerBlitzHistoryResponse(player_uuid=uuid, history=sampled_entries)
