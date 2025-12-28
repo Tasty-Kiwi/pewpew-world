@@ -18,7 +18,7 @@ def run():
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data"
     )
     level_data_path = os.path.join(data_dir, "github_data", "level_data.csv")
-    output_dir = os.path.join(data_dir, "monthly_leaderboard_monthly")
+    output_dir = os.path.join(data_dir, "monthly_lb_monthly")
     output_path = os.path.join(output_dir, "levels.txt")
     banned_path = os.path.join(output_dir, "banned_levels.txt")
 

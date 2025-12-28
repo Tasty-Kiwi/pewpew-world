@@ -10,8 +10,8 @@ from loguru import logger
 def run():
     data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
     score_data_path = os.path.join(data_dir, "github_data", "score_data.csv")
-    levels_path = os.path.join(data_dir, "monthly_leaderboard_monthly", "levels.txt")
-    output_path = os.path.join(data_dir, "monthly_leaderboard_daily", "leaderboard.csv")
+    levels_path = os.path.join(data_dir, "monthly_lb_monthly", "levels.txt")
+    output_path = os.path.join(data_dir, "monthly_lb_daily", "leaderboard.csv")
 
     logger.info("Daily leaderboard processing started.")
 
