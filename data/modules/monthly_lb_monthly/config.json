@@ -1,3 +1,19 @@
 {
-    "exclude": []
+  "exclude": [
+    "asteroids",
+    "waves",
+    "eskiv",
+    "fury",
+    "hexagon",
+    "ceasefire",
+    "partitioner",
+    "symbiosis",
+    "pandemonium",
+    "r6tB425YS638C1Ij_DQEx",
+    "xo8lychHUy7lass08Cyjb",
+    "HpfC42TNwH5AEmvWkkQof",
+    "ZlxFwr1dXdXsZslFNyzL_",
+    "jSm8oA3VvXxn4TmISdMEh",
+    "81TpajqWIlSXYmZrfjSjw"
+  ]
 }
