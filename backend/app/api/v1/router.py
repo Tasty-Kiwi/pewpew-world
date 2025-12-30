@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import orjson
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -400,6 +401,42 @@ async def get_archived_quests(year: int, month: int, day: int):
     )
 
 
+def extract_history(
+    uuid: str,
+    sample_rate: int,
+    archive_dir: Path,
+    data_key: str,
+    model_class,
+):
+    """Extracts history points from json archives with optimized sampling and orjson."""
+    history = []
+    snapshot_counter = 0
+
+    for archive_file in sorted(archive_dir.glob("*_lb_*.json")):
+        with open(archive_file, "rb") as f:
+            archive = orjson.loads(f.read())
+
+        for entry in archive:
+            if snapshot_counter % sample_rate == 0:
+                timestamp = entry.get("timestamp", 0)
+
+                player_data = next(
+                    (p for p in entry.get("data", []) if p.get("acc") == uuid), None
+                )
+
+                if player_data:
+                    history.append(
+                        model_class(
+                            timestamp=timestamp,
+                            **{data_key: int(player_data.get(data_key, 0))},
+                        )
+                    )
+
+            snapshot_counter += 1
+
+    return history
+
+
 @router.get(
     "/player/{uuid}/get_xp_history",
     summary="Get player XP history",
@@ -414,26 +451,9 @@ async def get_player_xp_history(uuid: str, sample_rate: int = 1):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
     xp_archive_dir = base_path / "xp_lb_archive"
 
-    all_entries = []
-
-    for archive_file in sorted(xp_archive_dir.glob("xp_lb_*.json")):
-        with open(archive_file, "r") as f:
-            archive = json.load(f)
-
-        for entry in archive:
-            timestamp = entry.get("timestamp", 0)
-            for player in entry.get("data", []):
-                if player.get("acc") == uuid:
-                    all_entries.append(
-                        PlayerXPHistoryPoint(
-                            timestamp=timestamp, xp=int(player.get("xp", 0))
-                        )
-                    )
-                    break
-
-    all_entries.sort(key=lambda x: x.timestamp)
-
-    sampled_entries = all_entries[::sample_rate]
+    sampled_entries = extract_history(
+        uuid, sample_rate, xp_archive_dir, "xp", PlayerXPHistoryPoint
+    )
 
     return PlayerXPHistoryResponse(player_uuid=uuid, history=sampled_entries)
 
@@ -452,26 +472,9 @@ async def get_player_blitz_history(uuid: str, sample_rate: int = 1):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
     blitz_archive_dir = base_path / "blitz_lb_archive"
 
-    all_entries = []
-
-    for archive_file in sorted(blitz_archive_dir.glob("blitz_lb_*.json")):
-        with open(archive_file, "r") as f:
-            archive = json.load(f)
-
-        for entry in archive:
-            timestamp = entry.get("timestamp", 0)
-            for player in entry.get("data", []):
-                if player.get("acc") == uuid:
-                    all_entries.append(
-                        PlayerBlitzHistoryPoint(
-                            timestamp=timestamp, bsr=int(player.get("bsr", 0))
-                        )
-                    )
-                    break
-
-    all_entries.sort(key=lambda x: x.timestamp)
-
-    sampled_entries = all_entries[::sample_rate]
+    sampled_entries = extract_history(
+        uuid, sample_rate, blitz_archive_dir, "bsr", PlayerBlitzHistoryPoint
+    )
 
     return PlayerBlitzHistoryResponse(player_uuid=uuid, history=sampled_entries)
 
