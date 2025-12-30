@@ -16,7 +16,7 @@ def run():
     archive_dir = os.path.join(data_dir, "quests_archive")
     
     now = datetime.now()
-    filename = f"quests_{now.month}_{now.year}.json"
+    filename = f"quests_{now.month:02d}_{now.year}.json"
     filepath = os.path.join(archive_dir, filename)
     
     logger.info("Fetching daily quests data...")

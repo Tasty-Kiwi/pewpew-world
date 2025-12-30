@@ -16,7 +16,7 @@ def run():
     archive_dir = os.path.join(data_dir, "xp_lb_archive")
     
     now = datetime.now()
-    filename = f"xp_lb_{now.month}_{now.year}.json"
+    filename = f"xp_lb_{now.month:02d}_{now.year}.json"
     filepath = os.path.join(archive_dir, filename)
     
     logger.info("Fetching XP leaderboard data...")

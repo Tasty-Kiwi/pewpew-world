@@ -217,7 +217,7 @@ async def get_monthly_leaderboard():
 async def get_archived_monthly_leaderboard(year: int, month: int):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
     archive_path = (
-        base_path / f"monthly_lb_daily/archive/monthly_lb_{month}_{year}.json"
+        base_path / f"monthly_lb_daily/archive/monthly_lb_{month:02d}_{year}.json"
     )
     levels_archive_path = base_path / "monthly_lb_monthly/levels_archive.json"
 
@@ -314,7 +314,12 @@ def find_closest_timestamp(
 async def get_archived_xp_leaderboard(timestamp: float):
     dt = datetime.fromtimestamp(timestamp)
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
-    archive_path = base_path / f"xp_lb_archive/xp_lb_{dt.month}_{dt.year}.json"
+    archive_path = base_path / f"xp_lb_archive/xp_lb_{dt.month:02d}_{dt.year}.json"
+
+    if not archive_path.exists():
+        raise HTTPException(
+            status_code=404, detail=f"No XP archive found for {dt.month}/{dt.year}"
+        )
 
     with open(archive_path, "r") as f:
         archive = json.load(f)
@@ -336,7 +341,14 @@ async def get_archived_xp_leaderboard(timestamp: float):
 async def get_archived_blitz_leaderboard(timestamp: float):
     dt = datetime.fromtimestamp(timestamp)
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
-    archive_path = base_path / f"blitz_lb_archive/blitz_lb_{dt.month}_{dt.year}.json"
+    archive_path = (
+        base_path / f"blitz_lb_archive/blitz_lb_{dt.month:02d}_{dt.year}.json"
+    )
+
+    if not archive_path.exists():
+        raise HTTPException(
+            status_code=404, detail=f"No blitz archive found for {dt.month}/{dt.year}"
+        )
 
     with open(archive_path, "r") as f:
         archive = json.load(f)
@@ -357,7 +369,7 @@ async def get_archived_blitz_leaderboard(timestamp: float):
 )
 async def get_archived_quests(year: int, month: int, day: int):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
-    archive_path = base_path / f"quests_archive/quests_{month}_{year}.json"
+    archive_path = base_path / f"quests_archive/quests_{month:02d}_{year}.json"
 
     if not archive_path.exists():
         raise HTTPException(

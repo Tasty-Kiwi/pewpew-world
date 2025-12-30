@@ -132,7 +132,7 @@ def run():
         now = datetime.now()
         archive_dir = os.path.join(os.path.dirname(output_path), "archive")
         archive_path = os.path.join(
-            archive_dir, f"monthly_lb_{now.month}_{now.year}.json"
+            archive_dir, f"monthly_lb_{now.month:02d}_{now.year}.json"
         )
         timestamp = now.timestamp()
 
