@@ -116,7 +116,7 @@ export default function MonthlyLeaderboardPage() {
   return (
     <div className="container-xl p-4">
       <h1 className="page-title">Monthly Leaderboard</h1>
-      <br />
+      <p className="text-muted">Exclusive to this website!</p>
       <p>
         This is a monthly leaderboard. It tracks scores in a set of 5 levels,
         which changes every month.
