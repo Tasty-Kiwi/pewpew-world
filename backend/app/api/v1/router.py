@@ -19,9 +19,14 @@ class LeaderboardEntry(BaseModel):
     average_place: float
 
 
+class LevelInfo(BaseModel):
+    uuid: str
+    name: str
+
+
 class MonthlyLeaderboardResponse(BaseModel):
     timestamp: float
-    levels: List[str]
+    levels: List[LevelInfo]
     leaderboard: List[LeaderboardEntry]
 
 
@@ -175,6 +180,7 @@ async def get_monthly_leaderboard():
     leaderboard_path = base_path / "monthly_lb_daily/leaderboard.csv"
     levels_path = base_path / "monthly_lb_monthly/levels.txt"
     metadata_path = base_path / "github_data/metadata.json"
+    level_data_path = base_path / "github_data/level_data.csv"
 
     leaderboard = []
     levels = []
@@ -196,7 +202,19 @@ async def get_monthly_leaderboard():
 
     if levels_path.exists():
         with open(levels_path, "r") as f:
-            levels = [line.strip() for line in f if line.strip()]
+            level_uuids = [line.strip() for line in f if line.strip()]
+
+        level_name_map = {}
+        if level_data_path.exists():
+            with open(level_data_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    level_name_map[row["level_uuid"]] = row["name"]
+
+        levels = [
+            LevelInfo(uuid=uuid, name=level_name_map.get(uuid, uuid))
+            for uuid in level_uuids
+        ]
 
     if metadata_path.exists():
         with open(metadata_path, "r") as f:
@@ -221,6 +239,7 @@ async def get_archived_monthly_leaderboard(year: int, month: int):
         base_path / f"monthly_lb_daily/archive/monthly_lb_{month:02d}_{year}.json"
     )
     levels_archive_path = base_path / "monthly_lb_monthly/levels_archive.json"
+    level_data_path = base_path / "github_data/level_data.csv"
 
     if not archive_path.exists():
         raise HTTPException(
@@ -255,7 +274,19 @@ async def get_archived_monthly_leaderboard(year: int, month: int):
         with open(levels_archive_path, "r") as f:
             levels_archive = json.load(f)
             closest_levels_entry = find_closest_timestamp(levels_archive, timestamp)
-            levels = closest_levels_entry.get("levels", [])
+            level_uuids = closest_levels_entry.get("levels", [])
+
+        level_name_map = {}
+        if level_data_path.exists():
+            with open(level_data_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    level_name_map[row["level_uuid"]] = row["name"]
+
+        levels = [
+            LevelInfo(uuid=uuid, name=level_name_map.get(uuid, uuid))
+            for uuid in level_uuids
+        ]
 
     return MonthlyLeaderboardResponse(
         timestamp=timestamp, levels=levels, leaderboard=leaderboard

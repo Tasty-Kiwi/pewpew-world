@@ -5,6 +5,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import ChevronButton from "@/components/chevron-button";
 import Accordion, { AccordionItem } from "@/components/accordion";
 import DataTable from "@/components/data-table";
+import ColorizedText from "@/components/colorized-text";
 import api from "@/lib/api";
 
 interface LeaderboardEntry {
@@ -15,9 +16,14 @@ interface LeaderboardEntry {
   average_place: number;
 }
 
+interface LevelInfo {
+  uuid: string;
+  name: string;
+}
+
 interface MonthlyResponse {
   timestamp: number;
-  levels: string[];
+  levels: LevelInfo[];
   leaderboard: LeaderboardEntry[];
 }
 
@@ -89,7 +95,7 @@ const scoreCalculation = (
 
 export default function MonthlyLeaderboardPage() {
   const [data, setData] = useState<LeaderboardEntry[]>([]);
-  const [levelNames, setLevelNames] = useState<string[]>([]);
+  const [levels, setLevels] = useState<LevelInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -99,7 +105,7 @@ export default function MonthlyLeaderboardPage() {
           "/v1/get_monthly_leaderboard",
         );
         setData(response.data.leaderboard);
-        setLevelNames(response.data.levels);
+        setLevels(response.data.levels);
       } catch (error) {
         console.error("Failed to fetch leaderboard:", error);
       } finally {
@@ -137,17 +143,30 @@ export default function MonthlyLeaderboardPage() {
         </AccordionItem>
       </Accordion>
 
-      <p>
-        <b>Levels this month: </b>
-        {isLoading ? (
-          <span
-            className="spinner-border spinner-border-sm ms-2"
-            role="status"
-          ></span>
-        ) : (
-          levelNames.join(", ")
-        )}
-      </p>
+      <div className="hr-text">leaderboard</div>
+
+      <div className="card mb-4">
+        <div className="card-body">
+          <h3 className="card-title">Levels this month</h3>
+          <p className="text-secondary">
+            {isLoading ? (
+              <span
+                className="spinner-border spinner-border-sm ms-2"
+                role="status"
+              ></span>
+            ) : (
+              <span>
+                {levels.map((l, i) => (
+                  <span key={l.uuid}>
+                    {i > 0 && "; "}
+                    <ColorizedText text={l.name} />
+                  </span>
+                ))}
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="text-center py-5">
