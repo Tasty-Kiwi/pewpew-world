@@ -58,6 +58,42 @@ const kindNames: Record<number, string> = {
   2: "Survive",
 };
 
+const enemyTypeNames: Record<string, string> = {
+  ASTEROID: "Asteroids",
+  BAF: "BAFs",
+  INERTIAC: "Inertiacs",
+  MOTHERSHIP: "Motherships",
+  MOTHERSHIP_BULLET: "Mothership Bullets",
+  ROLLING_CUBE: "Rolling Cubes",
+  ROLLING_SPHERE: "Rolling Spheres",
+  UFO: "UFOs",
+  WARY: "Waries",
+  CROWDER: "Crowders",
+  CUSTOMIZABLE_ENTITY: "Customizable Entities",
+  SHIP: "Ships",
+  BOMB: "Bombs",
+  BAF_BLUE: "Blue BAFs",
+  BAF_RED: "Red BAFs",
+  WARY_MISSILE: "Wary Missiles",
+  UFO_BULLET: "UFO Bullets",
+  SPINY: "Spinies",
+  SUPER_MOTHERSHIP: "Super Motherships",
+  PLAYER_BULLET: "Player Bullets",
+  BOMB_EXPLOSION: "Bomb Explosions",
+  PLAYER_EXPLOSION: "Player Explosions",
+  BONUS: "Bonuses",
+  FLOATING_MESSAGE: "Floating Messages",
+  POINTONIUM: "Pointonium",
+  KAMIKAZE: "Kamikazes",
+  BONUS_IMPLOSION: "Bonus Implosions",
+  MACE: "Maces",
+  PLASMA_FIELD: "Plasma Fields",
+  LASERBEAM: "Laserbeams",
+  EXPLODER: "Exploders",
+  EXPLODER_EXPLOSION: "Exploder Explosions",
+  WEAPON_ZONE: "Weapon Zones",
+};
+
 export default function QuestsArchivePage() {
   const [data, setData] = useState<QuestsData | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -197,6 +233,34 @@ export default function QuestsArchivePage() {
     });
   };
 
+  const renderQuestKindBadge = (kind: number) => {
+    switch (kind) {
+      case 0:
+        return (
+          <span className="badge bg-red-lt text-red-lt-fg">
+            Destroy Enemies
+          </span>
+        );
+      case 1:
+        return (
+          <span className="badge bg-green-lt text-green-lt-fg">
+            Reach Score
+          </span>
+        );
+      case 2:
+        return (
+          <span className="badge bg-azure-lt text-azure-lt-fg">Survive</span>
+        );
+      default:
+        return <span className="badge bg-secondary-lt">Kind: {kind}</span>;
+    }
+  };
+
+  const formatEnemyName = (enemy: string | null) => {
+    if (!enemy) return "";
+    return enemyTypeNames[enemy] || enemy;
+  };
+
   useEffect(() => {
     const now = new Date();
     const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -308,11 +372,11 @@ export default function QuestsArchivePage() {
                 <div className="ms-auto lh-1 text-muted">
                   {uptimeData
                     ? `${new Date(
-                        uptimeData.year,
-                        uptimeData.month - 1,
-                      ).toLocaleString("default", {
-                        month: "long",
-                      })} ${uptimeData.year}`
+                      uptimeData.year,
+                      uptimeData.month - 1,
+                    ).toLocaleString("default", {
+                      month: "long",
+                    })} ${uptimeData.year}`
                     : "Loading..."}
                 </div>
               </div>
@@ -375,32 +439,49 @@ export default function QuestsArchivePage() {
                         </strong>
                       </div>
                       <div className="card-body">
-                        <p className="mb-1">
-                          <strong>Type:</strong>{" "}
-                          {kindNames[quest.kind] || `Kind: ${quest.kind}`}
-                        </p>
-                        <p className="mb-1">
-                          <strong>Goal:</strong> {quest.goal}
-                        </p>
-                        <p className="mb-1">
-                          <strong>XP:</strong> {quest.xp}
-                        </p>
-                        {quest.enemy && (
-                          <p className="mb-1">
-                            <strong>Enemy:</strong> {quest.enemy}
-                          </p>
-                        )}
-                        <hr />
-                        <p className="mb-1">
-                          <strong>Levels:</strong>
-                        </p>
-                        <ul className="mb-0">
-                          {quest.levels.map((level, i) => (
-                            <li key={i}>
-                              <ColorizedText text={level.name} />
-                            </li>
-                          ))}
-                        </ul>
+                        <div
+                          className="datagrid"
+                          style={{ gridTemplateColumns: "repeat(2, 1fr)" }}
+                        >
+                          <div className="datagrid-item">
+                            <div className="datagrid-title">Type</div>
+                            <div className="datagrid-content">
+                              {renderQuestKindBadge(quest.kind)}
+                            </div>
+                          </div>
+                          <div className="datagrid-item">
+                            <div className="datagrid-title">Goal</div>
+                            <div className="datagrid-content">
+                              {quest.kind === 2
+                                ? `${quest.goal / 30}s`
+                                : quest.kind === 0
+                                  ? `${quest.goal} ${formatEnemyName(quest.enemy)}`
+                                  : quest.goal}
+                            </div>
+                          </div>
+                          <div className="datagrid-item">
+                            <div className="datagrid-title">XP</div>
+                            <div className="datagrid-content">{quest.xp}</div>
+                          </div>
+                          {quest.enemy && quest.kind !== 0 && (
+                            <div className="datagrid-item">
+                              <div className="datagrid-title">Enemy</div>
+                              <div className="datagrid-content">
+                                {formatEnemyName(quest.enemy)}
+                              </div>
+                            </div>
+                          )}
+                          <div className="datagrid-item">
+                            <div className="datagrid-title">Level</div>
+                            <div className="datagrid-content">
+                              {quest.levels && quest.levels.length > 0 ? (
+                                <ColorizedText text={quest.levels[0].name} />
+                              ) : (
+                                "Any official level"
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
