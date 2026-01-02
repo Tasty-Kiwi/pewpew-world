@@ -222,8 +222,10 @@ export default function PlayerProfilePage() {
               {xpHistory.length >= 2 && (
                 <div className="col-md-6">
                   <div className="card mb-4">
-                    <div className="card-body">
-                      <div className="subheader mb-3">XP Growth</div>
+                    <div className="card-body ps-0">
+                      <div className="ps-3">
+                        <div className="subheader mb-3">XP Growth</div>
+                      </div>
                       <div
                         className="position-relative"
                         style={{ minHeight: "240px" }}
@@ -307,8 +309,10 @@ export default function PlayerProfilePage() {
               {blitzHistory.length >= 2 && (
                 <div className="col-md-6">
                   <div className="card mb-4">
-                    <div className="card-body">
-                      <div className="subheader mb-3">Blitz Growth</div>
+                    <div className="card-body ps-0">
+                      <div className="ps-3">
+                        <div className="subheader mb-3">Blitz Growth</div>
+                      </div>
                       <div
                         className="position-relative"
                         style={{ minHeight: "240px" }}
