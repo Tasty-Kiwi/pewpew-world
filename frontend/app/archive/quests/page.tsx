@@ -34,6 +34,22 @@ interface QuestsErrorResponse {
   detail: string;
 }
 
+interface UptimeDay {
+  day: number;
+  status: "full data" | "partially available" | "no data";
+}
+
+interface UptimeResponse {
+  year: number;
+  month: number;
+  days: UptimeDay[];
+}
+
+const ARCHIVE_START_DATE = new Date(2025, 3, 10); // April 10th, 2025
+const ARCHIVE_START_DAY = 10;
+const ARCHIVE_START_MONTH = 3;
+const ARCHIVE_START_YEAR = 2025;
+
 type QuestsResponse = QuestsSuccessResponse | QuestsErrorResponse;
 
 const kindNames: Record<number, string> = {
@@ -48,6 +64,7 @@ export default function QuestsArchivePage() {
   const [actualTimestamp, setActualTimestamp] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uptimeData, setUptimeData] = useState<UptimeResponse | null>(null);
 
   const fetchData = async (year: number, month: number, day: number) => {
     setIsLoading(true);
@@ -66,10 +83,118 @@ export default function QuestsArchivePage() {
       }
     } catch (err) {
       console.error("Failed to fetch quests:", err);
-      setError("Failed to load data");
+      setError("Data not available");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchUptimeData = async (year: number, month: number) => {
+    try {
+      const response = await api.get<UptimeResponse>(
+        `/v1/archive/uptime/quests/${year}/${month}`,
+      );
+      setUptimeData(response.data);
+    } catch (err) {
+      console.error("Failed to fetch uptime data:", err);
+      setUptimeData(null);
+    }
+  };
+
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case "full data":
+        return "bg-success";
+      case "partially available":
+        return "bg-warning";
+      case "no data":
+        return "bg-danger";
+      default:
+        return "bg-secondary";
+    }
+  };
+
+  const getStatusTitle = (status: string) => {
+    switch (status) {
+      case "full data":
+        return "Fully Available";
+      case "partially available":
+        return "Partially Available";
+      case "no data":
+        return "Downtime";
+      default:
+        return status;
+    }
+  };
+
+  const calculateAvailability = () => {
+    if (!uptimeData || uptimeData.days.length === 0) return 0;
+    const now = new Date();
+    const isCurrentOrFutureMonth =
+      uptimeData.year > now.getFullYear() ||
+      (uptimeData.year === now.getFullYear() &&
+        uptimeData.month > now.getMonth() + 1) ||
+      (uptimeData.year === now.getFullYear() &&
+        uptimeData.month === now.getMonth() + 1);
+    const currentDay = now.getDate();
+
+    const relevantDays = uptimeData.days.filter((d) => {
+      if (uptimeData.year < ARCHIVE_START_YEAR) return false;
+      if (uptimeData.year > ARCHIVE_START_YEAR) return true;
+      if (uptimeData.month < ARCHIVE_START_MONTH + 1) return false;
+      if (uptimeData.month > ARCHIVE_START_MONTH + 1) return true;
+      return d.day >= ARCHIVE_START_DAY;
+    });
+
+    if (relevantDays.length === 0) return 0;
+    const fullDataDays = relevantDays.filter(
+      (d) => d.status === "full data",
+    ).length;
+    return ((fullDataDays / relevantDays.length) * 100).toFixed(1);
+  };
+
+  const renderTrackingBlocks = () => {
+    if (!uptimeData) return null;
+    const now = new Date();
+    const isCurrentOrFutureMonth =
+      uptimeData.year > now.getFullYear() ||
+      (uptimeData.year === now.getFullYear() &&
+        uptimeData.month > now.getMonth() + 1) ||
+      (uptimeData.year === now.getFullYear() &&
+        uptimeData.month === now.getMonth() + 1);
+    const currentDay = now.getDate();
+    const isBeforeArchiveStart =
+      uptimeData.year < ARCHIVE_START_YEAR ||
+      (uptimeData.year === ARCHIVE_START_YEAR &&
+        uptimeData.month < ARCHIVE_START_MONTH + 1);
+
+    const isInArchiveMonth =
+      uptimeData.year === ARCHIVE_START_YEAR &&
+      uptimeData.month === ARCHIVE_START_MONTH + 1;
+
+    return uptimeData.days.map((day) => {
+      const isFutureDay =
+        isCurrentOrFutureMonth &&
+        day.status === "no data" &&
+        day.day > currentDay;
+      const isBeforeArchive =
+        isBeforeArchiveStart ||
+        (isInArchiveMonth &&
+          day.status === "no data" &&
+          day.day < ARCHIVE_START_DAY);
+
+      const isEmpty = isFutureDay || isBeforeArchive;
+
+      return (
+        <div
+          key={day.day}
+          className={`tracking-block ${isEmpty ? "" : getStatusClass(day.status)}`}
+          data-bs-toggle={isEmpty ? undefined : "tooltip"}
+          data-bs-placement={isEmpty ? undefined : "top"}
+          title={isEmpty ? undefined : getStatusTitle(day.status)}
+        ></div>
+      );
+    });
   };
 
   useEffect(() => {
@@ -83,6 +208,7 @@ export default function QuestsArchivePage() {
     const month = now.getMonth() + 1;
     const day = now.getDate();
     fetchData(year, month, day);
+    fetchUptimeData(year, month);
   }, []);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +220,38 @@ export default function QuestsArchivePage() {
       const month = date.getMonth() + 1;
       const day = date.getDate();
       fetchData(year, month, day);
+      fetchUptimeData(year, month);
     }
+  };
+
+  const isValidDate = () => {
+    if (!selectedDate) return true;
+    const date = new Date(selectedDate);
+    const now = new Date();
+    const archiveStart = new Date(
+      ARCHIVE_START_YEAR,
+      ARCHIVE_START_MONTH,
+      ARCHIVE_START_DAY,
+    );
+    return date <= now && date >= archiveStart;
+  };
+
+  const getDateWarning = () => {
+    if (!selectedDate) return null;
+    const date = new Date(selectedDate);
+    const now = new Date();
+    const archiveStart = new Date(
+      ARCHIVE_START_YEAR,
+      ARCHIVE_START_MONTH,
+      ARCHIVE_START_DAY,
+    );
+    if (date > now) {
+      return "Cannot view future dates in the archive.";
+    }
+    if (date < archiveStart) {
+      return `Archive data starts on ${ARCHIVE_START_DATE.toLocaleDateString()}.`;
+    }
+    return null;
   };
 
   return (
@@ -125,8 +282,8 @@ export default function QuestsArchivePage() {
         <div>
           <h4 className="alert-heading">Archive details</h4>
           <div className="alert-description">
-            Data starts on April 10th 2025. Some days may be missing from the
-            archive.
+            Data starts on {ARCHIVE_START_DATE.toLocaleDateString()}. Some days
+            may be missing from the archive.
           </div>
         </div>
       </div>
@@ -140,70 +297,119 @@ export default function QuestsArchivePage() {
         />
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border" role="status"></div>
-        </div>
-      ) : error ? (
-        <div className="alert alert-warning">
-          {error}. Data starts on April 10th 2025.
-        </div>
-      ) : data && actualTimestamp !== null ? (
+      {!isValidDate() ? (
+        <div className="alert alert-warning">{getDateWarning()}</div>
+      ) : (
         <>
-          <p className="text-muted">
-            Showing quests for{" "}
-            {new Date(actualTimestamp * 1000).toLocaleString()} (snapped at{" "}
-            {actualTimestamp})
-          </p>
           <div className="card mb-4">
             <div className="card-body">
-              <h3>Quests #{data.quests_id}</h3>
-              <p className="text-secondary">
-                Expires: {new Date(data.expiration * 1000).toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <div className="row">
-            {data.quests.map((quest, index) => (
-              <div key={index} className="col-md-4 mb-3">
-                <div className="card h-100">
-                  <div className="card-header">
-                    <strong>Quest {index + 1}</strong>
-                  </div>
-                  <div className="card-body">
-                    <p className="mb-1">
-                      <strong>Type:</strong>{" "}
-                      {kindNames[quest.kind] || `Kind: ${quest.kind}`}
-                    </p>
-                    <p className="mb-1">
-                      <strong>Goal:</strong> {quest.goal}
-                    </p>
-                    <p className="mb-1">
-                      <strong>XP:</strong> {quest.xp}
-                    </p>
-                    {quest.enemy && (
-                      <p className="mb-1">
-                        <strong>Enemy:</strong> {quest.enemy}
-                      </p>
-                    )}
-                    <hr />
-                    <p className="mb-1">
-                      <strong>Levels:</strong>
-                    </p>
-                    <ul className="mb-0">
-                      {quest.levels.map((level, i) => (
-                        <li key={i}>
-                          <ColorizedText text={level.name} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              <div className="d-flex align-items-center">
+                <div className="subheader">Archive availability</div>
+                <div className="ms-auto lh-1 text-muted">
+                  {uptimeData
+                    ? `${new Date(
+                        uptimeData.year,
+                        uptimeData.month - 1,
+                      ).toLocaleString("default", {
+                        month: "long",
+                      })} ${uptimeData.year}`
+                    : "Loading..."}
                 </div>
               </div>
-            ))}
+              <div className="d-flex align-items-baseline">
+                <div className="h1 mb-3 me-2">{calculateAvailability()}%</div>
+              </div>
+              <div className="mt-2">
+                <div className="tracking">{renderTrackingBlocks()}</div>
+              </div>
+            </div>
           </div>
+
+          {isLoading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border" role="status"></div>
+            </div>
+          ) : error ? (
+            <div className="alert alert-warning">{error}.</div>
+          ) : data && actualTimestamp !== null ? (
+            <>
+              <p className="text-muted">
+                Showing quests for{" "}
+                {new Date(actualTimestamp * 1000).toLocaleString()} (snapped at{" "}
+                {actualTimestamp})
+              </p>
+              <div className="card mb-4">
+                <div className="card-body">
+                  <h3>Quests #{data.quests_id}</h3>
+                  <p className="text-secondary">
+                    Expires: {new Date(data.expiration * 1000).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="row">
+                {data.quests.map((quest, index) => (
+                  <div key={index} className="col-md-4 mb-3">
+                    <div className="card h-100">
+                      <div className="card-header">
+                        <strong>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="icon icon-tabler icons-tabler-outline icon-tabler-target-arrow me-2"
+                          >
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+                            <path d="M12 7a5 5 0 1 0 5 5" />
+                            <path d="M13 3.055a9 9 0 1 0 7.941 7.945" />
+                            <path d="M15 6v3h3l3 -3h-3v-3l-3 3" />
+                            <path d="M15 9l-3 3" />
+                          </svg>
+                          Quest {index + 1}
+                        </strong>
+                      </div>
+                      <div className="card-body">
+                        <p className="mb-1">
+                          <strong>Type:</strong>{" "}
+                          {kindNames[quest.kind] || `Kind: ${quest.kind}`}
+                        </p>
+                        <p className="mb-1">
+                          <strong>Goal:</strong> {quest.goal}
+                        </p>
+                        <p className="mb-1">
+                          <strong>XP:</strong> {quest.xp}
+                        </p>
+                        {quest.enemy && (
+                          <p className="mb-1">
+                            <strong>Enemy:</strong> {quest.enemy}
+                          </p>
+                        )}
+                        <hr />
+                        <p className="mb-1">
+                          <strong>Levels:</strong>
+                        </p>
+                        <ul className="mb-0">
+                          {quest.levels.map((level, i) => (
+                            <li key={i}>
+                              <ColorizedText text={level.name} />
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
     </div>
   );
 }

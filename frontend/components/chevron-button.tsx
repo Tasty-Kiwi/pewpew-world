@@ -1,5 +1,3 @@
-import { IconChevronsRight } from "@tabler/icons-react";
-
 interface IconButtonProps {
   label: string;
   onClick?: () => void;

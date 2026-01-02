@@ -80,7 +80,7 @@ class QuestLevel(BaseModel):
 class Quest(BaseModel):
     kind: int
     goal: int
-    levels: List[QuestLevel]
+    levels: List[QuestLevel] = []
     xp: int
     enemy: Optional[str] = None
 
@@ -596,6 +596,61 @@ async def get_archived_quests(year: int, month: int, day: int):
     raise HTTPException(
         status_code=404, detail=f"No quests found for {year}/{month}/{day}"
     )
+
+
+@router.get(
+    "/archive/uptime/quests/{year}/{month}",
+    summary="Get quests uptime status for a month",
+    description="Checks availability of quests data for each day of a given month",
+    tags=["archive"],
+    response_model=MonthUptimeResponse,
+)
+async def get_quests_uptime(year: int, month: int):
+    base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
+    archive_path = base_path / f"quests_archive/quests_{month:02d}_{year}.json"
+
+    if not archive_path.exists():
+        raise HTTPException(
+            status_code=404, detail=f"No quests archive found for {month}/{year}"
+        )
+
+    with open(archive_path, "r") as f:
+        archive = json.load(f)
+
+    next_month = (
+        datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        if month < 12
+        else datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    )
+    days_in_month = (next_month - timedelta(days=1)).day
+
+    month_end = (
+        datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        if month < 12
+        else datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    )
+
+    days = []
+    for day in range(1, days_in_month + 1):
+        day_start = datetime(year, month, day, tzinfo=timezone.utc)
+        day_end = (
+            datetime(year, month, day + 1, tzinfo=timezone.utc)
+            if day < days_in_month
+            else month_end
+        )
+
+        day_start_ts = day_start.timestamp()
+        day_end_ts = day_end.timestamp()
+
+        has_data = any(
+            day_start_ts <= entry.get("timestamp", 0) < day_end_ts
+            for entry in archive
+        )
+
+        status = "full data" if has_data else "no data"
+        days.append(DayStatus(day=day, status=status))
+
+    return MonthUptimeResponse(year=year, month=month, days=days)
 
 
 def extract_history(
