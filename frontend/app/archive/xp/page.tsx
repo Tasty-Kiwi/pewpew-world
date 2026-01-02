@@ -21,6 +21,17 @@ interface XPErrorResponse {
   detail: string;
 }
 
+interface UptimeDay {
+  day: number;
+  status: "full data" | "partially available" | "no data";
+}
+
+interface UptimeResponse {
+  year: number;
+  month: number;
+  days: UptimeDay[];
+}
+
 type XPResponse = XPSuccessResponse | XPErrorResponse;
 
 const columns: ColumnDef<XPEntry>[] = [
@@ -42,6 +53,7 @@ export default function XPLeaderboardPage() {
   const [actualTimestamp, setActualTimestamp] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uptimeData, setUptimeData] = useState<UptimeResponse | null>(null);
 
   const fetchData = async (timestamp: number) => {
     setIsLoading(true);
@@ -66,6 +78,65 @@ export default function XPLeaderboardPage() {
     }
   };
 
+  const fetchUptimeData = async (year: number, month: number) => {
+    try {
+      const response = await api.get<UptimeResponse>(
+        `/v1/archive/uptime/xp_leaderboard/${year}/${month}`,
+      );
+      setUptimeData(response.data);
+    } catch (err) {
+      console.error("Failed to fetch uptime data:", err);
+      setUptimeData(null);
+    }
+  };
+
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case "full data":
+        return "bg-success";
+      case "partially available":
+        return "bg-warning";
+      case "no data":
+        return "bg-danger";
+      default:
+        return "bg-secondary";
+    }
+  };
+
+  const getStatusTitle = (status: string) => {
+    switch (status) {
+      case "full data":
+        return "Fully Available";
+      case "partially available":
+        return "Partially Available";
+      case "no data":
+        return "Downtime";
+      default:
+        return status;
+    }
+  };
+
+  const calculateAvailability = () => {
+    if (!uptimeData || uptimeData.days.length === 0) return 0;
+    const fullDataDays = uptimeData.days.filter(
+      (d) => d.status === "full data",
+    ).length;
+    return ((fullDataDays / uptimeData.days.length) * 100).toFixed(1);
+  };
+
+  const renderTrackingBlocks = () => {
+    if (!uptimeData) return null;
+    return uptimeData.days.map((day) => (
+      <div
+        key={day.day}
+        className={`tracking-block ${getStatusClass(day.status)}`}
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title={getStatusTitle(day.status)}
+      ></div>
+    ));
+  };
+
   useEffect(() => {
     const now = new Date();
     const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -75,6 +146,10 @@ export default function XPLeaderboardPage() {
 
     const timestamp = Math.floor(now.getTime() / 1000);
     fetchData(timestamp);
+    
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    fetchUptimeData(currentYear, currentMonth);
   }, []);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +159,7 @@ export default function XPLeaderboardPage() {
       const date = new Date(dateStr);
       const timestamp = Math.floor(date.getTime() / 1000);
       fetchData(timestamp);
+      fetchUptimeData(date.getFullYear(), date.getMonth() + 1);
     }
   };
 
@@ -134,6 +210,28 @@ export default function XPLeaderboardPage() {
           value={selectedDate}
           onChange={handleDateChange}
         />
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="subheader">Archive availability</div>
+            <div class="ms-auto lh-1 text-muted">
+              {uptimeData
+                ? `${new Date(
+                    uptimeData.year,
+                    uptimeData.month - 1,
+                  ).toLocaleString("default", { month: "long" })} ${uptimeData.year}`
+                : "Loading..."}
+            </div>
+          </div>
+          <div class="d-flex align-items-baseline">
+            <div class="h1 mb-3 me-2">{calculateAvailability()}%</div>
+          </div>
+          <div class="mt-2">
+            <div class="tracking">{renderTrackingBlocks()}</div>
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
