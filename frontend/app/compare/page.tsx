@@ -200,59 +200,61 @@ export default function ComparePage() {
         <div className="card-header">
           <h3 className="card-title">Rankings</h3>
         </div>
-        <div className="table-responsive">
-          <table className="table table-vcenter">
-            <thead>
-              <tr>
-                <th>Leaderboard</th>
-                {playersData.map((p) => (
-                  <th key={p.uuid} className="text-center">
-                    <div className="d-flex flex-column align-items-center">
-                      <ColorizedText text={p.name} />
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {["Monthly", "XP", "Blitz"].map((lbType) => (
-                <tr key={lbType}>
-                  <td>{lbType}</td>
-                  {playersData.map((p) => {
-                    let placement: LeaderboardPlacement | undefined;
-                    if (lbType === "Monthly")
-                      placement = p.placements?.monthly_leaderboard;
-                    else if (lbType === "XP")
-                      placement = p.placements?.xp_leaderboard;
-                    else if (lbType === "Blitz")
-                      placement = p.placements?.blitz_leaderboard;
-
-                    const color = getMedalColor(placement?.placement || null);
-
-                    return (
-                      <td key={p.uuid} className="text-center">
-                        {placement && !placement.not_found ? (
-                          <span
-                            className="badge"
-                            style={{
-                              backgroundColor: color || "#f0f0f0",
-                              color: color ? "#000" : "inherit",
-                              border: color ? "none" : "1px solid #ccc",
-                              fontSize: "1.1em",
-                            }}
-                          >
-                            #{placement.placement}
-                          </span>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                    );
-                  })}
+        <div className="card-content">
+          <div className="table-responsive ms-1">
+            <table className="table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Leaderboard</th>
+                  {playersData.map((p) => (
+                    <th key={p.uuid} className="text-center">
+                      <div className="d-flex flex-column align-items-center">
+                        <ColorizedText text={p.name} />
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {["Monthly", "XP", "Blitz"].map((lbType) => (
+                  <tr key={lbType}>
+                    <td>{lbType}</td>
+                    {playersData.map((p) => {
+                      let placement: LeaderboardPlacement | undefined;
+                      if (lbType === "Monthly")
+                        placement = p.placements?.monthly_leaderboard;
+                      else if (lbType === "XP")
+                        placement = p.placements?.xp_leaderboard;
+                      else if (lbType === "Blitz")
+                        placement = p.placements?.blitz_leaderboard;
+
+                      const color = getMedalColor(placement?.placement || null);
+
+                      return (
+                        <td key={p.uuid} className="text-center">
+                          {placement && !placement.not_found ? (
+                            <span
+                              className="badge"
+                              style={{
+                                backgroundColor: color || "inherit",
+                                color: color ? "#000" : "inherit",
+                                border: color ? "none" : "inherit",
+                                fontSize: "1.1em",
+                              }}
+                            >
+                              #{placement.placement}
+                            </span>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -285,7 +287,6 @@ export default function ComparePage() {
                   xaxis: { type: "datetime" },
                   stroke: { curve: "smooth", width: 2 },
                   legend: { position: "top" },
-                  theme: { mode: "light" }, // Adjust based on theme if needed
                 }}
                 series={xpSeries}
                 type="line"
@@ -432,7 +433,7 @@ export default function ComparePage() {
           ))}
           <div className="dropdown d-inline-block">
             <button
-              className="btn btn-outline-primary btn-icon"
+              className="btn btn-icon"
               onClick={() => setAddingPlayer(!addingPlayer)}
               title="Add Player"
             >
@@ -487,7 +488,7 @@ export default function ComparePage() {
         </div>
       ) : (
         <>
-          {playersData.length > 0 ? (
+          {playersData.length >= 2 ? (
             <>
               {renderLeaderboardComparison()}
               {renderCharts()}
@@ -495,16 +496,34 @@ export default function ComparePage() {
               {comparisonData.length > 0 && renderScoresTable()}
             </>
           ) : (
-            <div className="empty">
-              <div className="empty-header">No players selected</div>
-              <p className="empty-title">Add players to start comparing</p>
-              <div className="empty-action">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setAddingPlayer(true)}
+            <div class="alert alert-warning" role="alert">
+              <div class="alert-icon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="icon alert-icon icon-2"
                 >
-                  Add Player
-                </button>
+                  <path d="M12 9v4" />
+                  <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
+                  <path d="M12 16h.01" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="alert-heading">
+                  {playersData.length === 0
+                    ? "No players selected"
+                    : "Not enough players"}
+                </h4>
+                <div class="alert-description">
+                  At least 2 players must be selected to compare
+                </div>
               </div>
             </div>
           )}
