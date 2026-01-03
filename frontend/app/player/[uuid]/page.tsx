@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
+import { useTheme } from "@/components/theme-provider";
 import api from "@/helpers/api";
 import ColorizedText from "@/components/colorized-text";
 import DataTable from "@/components/data-table";
@@ -83,6 +84,7 @@ interface FlattenedScore {
 }
 
 export default function PlayerProfilePage() {
+  const { theme } = useTheme();
   const params = useParams();
   const uuid = params?.uuid as string;
   const [history, setHistory] = useState<UsernameChange[]>([]);
@@ -392,7 +394,11 @@ export default function PlayerProfilePage() {
                               strokeDashArray: 4,
                             },
                             xaxis: {
-                              labels: {},
+                              labels: {
+                                style: {
+                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                                },
+                              },
                               tooltip: {
                                 enabled: false,
                               },
@@ -404,6 +410,9 @@ export default function PlayerProfilePage() {
                             yaxis: {
                               labels: {
                                 formatter: (val) => val.toLocaleString(),
+                                style: {
+                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                                },
                               },
                             },
                             colors: ["#206bc4"],
@@ -479,7 +488,11 @@ export default function PlayerProfilePage() {
                               strokeDashArray: 4,
                             },
                             xaxis: {
-                              labels: {},
+                              labels: {
+                                style: {
+                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                                },
+                              },
                               tooltip: {
                                 enabled: false,
                               },
@@ -492,6 +505,9 @@ export default function PlayerProfilePage() {
                               labels: {
                                 formatter: (val) =>
                                   Math.round(val).toLocaleString(),
+                                style: {
+                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                                },
                               },
                             },
                             colors: ["#ae3ec9"],

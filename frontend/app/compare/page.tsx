@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
+import { useTheme } from "@/components/theme-provider";
 import api from "@/helpers/api";
 import { stripColorCodes } from "@/helpers/text-utils";
 import ColorizedText from "@/components/colorized-text";
@@ -69,7 +70,13 @@ interface ComparisonRow {
   [key: string]: any; // player_uuid -> { score: number, ... }
 }
 
+interface PlayerShortInfo {
+  account_id: string;
+  username: string;
+}
+
 export default function ComparePage() {
+  const { theme } = useTheme();
   const searchParams = useSearchParams();
   const router = useRouter();
   const playersParam = searchParams.get("players");
@@ -81,9 +88,24 @@ export default function ComparePage() {
   const [playersData, setPlayersData] = useState<PlayerData[]>([]);
   const [comparisonData, setComparisonData] = useState<ComparisonRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newPlayerId, setNewPlayerId] = useState("");
+  const [availablePlayers, setAvailablePlayers] = useState<PlayerShortInfo[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [showMobileList, setShowMobileList] = useState(false);
+
+  useEffect(() => {
+    api.get("/v1/data/get_players")
+      .then(res => setAvailablePlayers(res.data.players))
+      .catch(err => console.error("Error fetching players:", err));
+  }, []);
+
+  const filteredPlayers = useMemo(() => {
+    if (!searchTerm) return [];
+    const lowerSearch = searchTerm.toLowerCase();
+    return availablePlayers
+      .filter((p) => stripColorCodes(p.username).toLowerCase().includes(lowerSearch))
+      .slice(0, 50); // Show up to 50 matches
+  }, [searchTerm, availablePlayers]);
 
   useEffect(() => {
     if (playerUuids.length === 0) {
@@ -192,12 +214,12 @@ export default function ComparePage() {
     setComparisonData(rows);
   };
 
-  const handleAddPlayer = () => {
-    if (newPlayerId && !playerUuids.includes(newPlayerId)) {
+  const handleAddPlayer = (id: string) => {
+    if (id && !playerUuids.includes(id)) {
       const newParams = new URLSearchParams(searchParams.toString());
-      newParams.set("players", [...playerUuids, newPlayerId].join(","));
+      newParams.set("players", [...playerUuids, id].join(","));
       router.push(`/compare?${newParams.toString()}`);
-      setNewPlayerId("");
+      setSearchTerm("");
       setAddingPlayer(false);
     }
   };
@@ -353,7 +375,11 @@ export default function ComparePage() {
         strokeDashArray: 4,
       },
       xaxis: {
-        labels: {},
+        labels: {
+          style: {
+            colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+          },
+        },
         tooltip: {
           enabled: false,
         },
@@ -365,7 +391,7 @@ export default function ComparePage() {
       legend: {
         position: "top",
         labels: {
-          colors: "#fff",
+          colors: theme === "dark" ? "#fff" : "#000",
         },
         itemMargin: {
           horizontal: 10,
@@ -393,6 +419,9 @@ export default function ComparePage() {
                     yaxis: {
                       labels: {
                         formatter: (val: number) => val.toLocaleString(),
+                        style: {
+                          colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                        },
                       },
                     },
                   }}
@@ -418,6 +447,9 @@ export default function ComparePage() {
                       labels: {
                         formatter: (val: number) =>
                           Math.round(val).toLocaleString(),
+                        style: {
+                          colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                        },
                       },
                     },
                   }}
@@ -616,27 +648,41 @@ export default function ComparePage() {
             {addingPlayer && (
               <div
                 className="dropdown-menu dropdown-menu-end dropdown-menu-card show"
-                style={{ width: "300px", right: 0, left: "auto" }}
+                style={{ width: "350px", right: 0, left: "auto" }}
               >
                 <div className="card">
                   <div className="card-body">
                     <h3 className="card-title">Add Player</h3>
                     <div className="mb-3">
-                      <label className="form-label">Player UUID</label>
+                      <label className="form-label">Search by Username</label>
                       <input
                         type="text"
                         className="form-control"
-                        value={newPlayerId}
-                        onChange={(e) => setNewPlayerId(e.target.value)}
-                        placeholder="Enter UUID"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Type to search..."
+                        autoFocus
                       />
                     </div>
-                    <button
-                      className="btn btn-primary w-100"
-                      onClick={handleAddPlayer}
-                    >
-                      Add
-                    </button>
+                    {searchTerm && (
+                      <div className="list-group list-group-flush border rounded-2" style={{ maxHeight: "300px", overflowY: "auto" }}>
+                        {filteredPlayers.length > 0 ? (
+                          filteredPlayers.map((p) => (
+                            <button
+                              key={p.account_id}
+                              className="list-group-item list-group-item-action py-2"
+                              onClick={() => handleAddPlayer(p.account_id)}
+                            >
+                              <ColorizedText text={p.username} />
+                            </button>
+                          ))
+                        ) : (
+                          <div className="list-group-item text-muted small p-2">
+                            No matching players found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
