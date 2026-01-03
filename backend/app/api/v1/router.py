@@ -38,6 +38,21 @@ class MonthlyLevelsResponse(BaseModel):
     levels: List[str]
 
 
+class SpeedrunLeaderboardEntry(BaseModel):
+    player_uuid: str
+    player_name: str
+    country: str
+    score_1p_official: float
+    score_2p_official: float
+    score_1p_community: float
+    score_2p_community: float
+
+
+class SpeedrunLeaderboardResponse(BaseModel):
+    timestamp: float
+    leaderboard: List[SpeedrunLeaderboardEntry]
+
+
 class XPLeaderboardEntry(BaseModel):
     acc: str
     name: str
@@ -247,6 +262,55 @@ async def get_monthly_leaderboard():
     return MonthlyLeaderboardResponse(
         timestamp=timestamp, levels=levels, leaderboard=leaderboard
     )
+
+
+@router.get(
+    "/get_speedrun_leaderboard",
+    summary="Get current speedrun leaderboard",
+    description="Retrieves the current daily speedrun leaderboard",
+    tags=["leaderboards"],
+    response_model=SpeedrunLeaderboardResponse,
+)
+async def get_speedrun_leaderboard():
+    base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
+
+    leaderboard_path = base_path / "speedrun_lb_daily/leaderboard.csv"
+    metadata_path = base_path / "github_data/metadata.json"
+    account_data_path = base_path / "github_data/account_data.csv"
+
+    leaderboard = []
+    timestamp = 0.0
+
+    player_name_map = {}
+    if account_data_path.exists():
+        with open(account_data_path, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                player_name_map[row["account_id"]] = row["username"]
+
+    if leaderboard_path.exists():
+        with open(leaderboard_path, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                player_uuid = row["player_uuid"]
+                leaderboard.append(
+                    SpeedrunLeaderboardEntry(
+                        player_uuid=player_uuid,
+                        player_name=player_name_map.get(player_uuid, player_uuid),
+                        country=row.get("country", ""),
+                        score_1p_official=float(row.get("score_1p_official", 0.0)),
+                        score_2p_official=float(row.get("score_2p_official", 0.0)),
+                        score_1p_community=float(row.get("score_1p_community", 0.0)),
+                        score_2p_community=float(row.get("score_2p_community", 0.0)),
+                    )
+                )
+
+    if metadata_path.exists():
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+            timestamp = metadata.get("timestamp", 0.0)
+
+    return SpeedrunLeaderboardResponse(timestamp=timestamp, leaderboard=leaderboard)
 
 
 @router.get(
