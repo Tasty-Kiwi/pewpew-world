@@ -50,7 +50,7 @@ def run():
     with open(output_file, "w") as f:
         json.dump(player_changes, f, indent=2)
 
-    logger.info(
+    logger.success(
         f"Player data tracking completed. Processed XP up to {last_xp_timestamp}, Blitz up to {last_blitz_timestamp}"
     )
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useTheme } from "@/components/theme-provider";
@@ -75,7 +76,7 @@ interface PlayerShortInfo {
   username: string;
 }
 
-export default function ComparePage() {
+function CompareContent() {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -757,5 +758,20 @@ export default function ComparePage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container-xl p-4 text-center py-5">
+          <div className="spinner-border text-primary" role="status"></div>
+          <div className="mt-2 text-muted">Loading compare tool...</div>
+        </div>
+      }
+    >
+      <CompareContent />
+    </Suspense>
   );
 }
