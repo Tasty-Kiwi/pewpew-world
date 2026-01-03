@@ -64,10 +64,11 @@ def run():
         # Structure: player_uuid -> { "country": ..., "1p_official": 0, "2p_official": 0, "1p_community": 0, "2p_community": 0 }
         player_data = {}
 
-        def get_player_entry(pid, country):
+        def get_player_entry(pid):
             if pid not in player_data:
                 player_data[pid] = {
-                    "country": country,
+                    "country": "",
+                    "has_1p_country": False,
                     "score_1p_official": 0.0,
                     "score_2p_official": 0.0,
                     "score_1p_community": 0.0,
@@ -127,8 +128,17 @@ def run():
                         seen_1p.add(aid)
 
                     # Add points
-                    entry = get_player_entry(aid, country)
+                    entry = get_player_entry(aid)
                     entry[key] += points
+
+                    # Country update logic
+                    if not is_2p:
+                        # 1p score is authoritative for country
+                        entry["country"] = country
+                        entry["has_1p_country"] = True
+                    elif not entry["has_1p_country"] and not entry["country"]:
+                         # 2p score: use as fallback only if we have no country yet
+                         entry["country"] = country
 
         # Format Output
         final_leaderboard = []

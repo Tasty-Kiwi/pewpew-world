@@ -93,7 +93,9 @@ export default function SpeedrunLeaderboardPage() {
         ...entry,
         display_score: parseFloat(score.toFixed(2)),
       };
-    }).sort((a, b) => b.display_score - a.display_score);
+    })
+      .filter((entry) => entry.display_score > 0)
+      .sort((a, b) => b.display_score - a.display_score);
   }, [data, levelScope, playerMode]);
 
   // Handle Community Selection disabling 2p
