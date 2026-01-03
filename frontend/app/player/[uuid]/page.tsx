@@ -87,84 +87,58 @@ export default function PlayerProfilePage() {
   const { theme } = useTheme();
   const params = useParams();
   const uuid = params?.uuid as string;
-  const [history, setHistory] = useState<UsernameChange[]>([]);
+  const [history, setHistory] = useState<UsernameChange[] | null>(null);
   const [placements, setPlacements] =
     useState<PlayerLeaderboardPlacementsResponse | null>(null);
-  const [xpHistory, setXpHistory] = useState<XPHistoryEntry[]>([]);
-  const [blitzHistory, setBlitzHistory] = useState<BlitzHistoryEntry[]>([]);
-  const [scores, setScores] = useState<FlattenedScore[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [xpHistory, setXpHistory] = useState<XPHistoryEntry[] | null>(null);
+  const [blitzHistory, setBlitzHistory] = useState<BlitzHistoryEntry[] | null>(null);
+  const [scores, setScores] = useState<FlattenedScore[] | null>(null);
 
   useEffect(() => {
     if (!uuid) return;
 
-    const startTime = Date.now();
-    const expectedDuration = 2900;
+    api.get(`/v1/player/${uuid}/get_username_change_history`).then((res) => {
+      setHistory(res.data.changes.reverse());
+    });
 
-    const progressInterval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      setProgress((prev) => {
-        if (prev >= 95) return 95;
-        const target = Math.min((elapsed / expectedDuration) * 95, 95);
-        return Math.max(prev, target);
-      });
-    }, 50);
+    api.get(`/v1/player/${uuid}/get_leaderboard_placements`).then((res) => {
+      setPlacements(res.data);
+    });
 
-    async function fetchData() {
-      try {
-        const [historyRes, placementsRes, xpRes, blitzRes, scoresRes] =
-          await Promise.all([
-            api.get(`/v1/player/${uuid}/get_username_change_history`),
-            api.get(`/v1/player/${uuid}/get_leaderboard_placements`),
-            api.get(`/v1/player/${uuid}/get_xp_history?sample_rate=1200`),
-            api.get(`/v1/player/${uuid}/get_blitz_history?sample_rate=60`),
-            api.get(`/v1/comparison/get_scores_by_level?player_uuids=${uuid}`),
-          ]);
+    api.get(`/v1/player/${uuid}/get_xp_history`).then((res) => {
+      setXpHistory(
+        res.data.history.sort((a: any, b: any) => a.timestamp - b.timestamp),
+      );
+    });
 
-        setHistory(historyRes.data.changes.reverse());
-        setPlacements(placementsRes.data);
-        setXpHistory(
-          xpRes.data.history.sort(
-            (a: any, b: any) => a.timestamp - b.timestamp,
-          ),
-        );
-        setBlitzHistory(
-          blitzRes.data.history
-            .map((h: any) => ({ ...h, bsr: h.bsr / 10 }))
-            .sort((a: any, b: any) => a.timestamp - b.timestamp),
-        );
+    api.get(`/v1/player/${uuid}/get_blitz_history`).then((res) => {
+      setBlitzHistory(
+        res.data.history
+          .map((h: any) => ({ ...h, bsr: h.bsr / 10 }))
+          .sort((a: any, b: any) => a.timestamp - b.timestamp),
+      );
+    });
 
-        if (scoresRes.data && scoresRes.data.levels) {
-          const flatScores: FlattenedScore[] = [];
-          scoresRes.data.levels.forEach((level: LevelScoresGroup) => {
-            level.scores.forEach((score) => {
-              flatScores.push({
-                level_uuid: level.level_uuid,
-                level_name: level.level_name,
-                score: score.score,
-                value_type: score.value_type,
-                timestamp: score.timestamp,
-                country: score.country,
-              });
+    api.get(`/v1/comparison/get_scores_by_level?player_uuids=${uuid}`).then((res) => {
+      if (res.data && res.data.levels) {
+        const flatScores: FlattenedScore[] = [];
+        res.data.levels.forEach((level: LevelScoresGroup) => {
+          level.scores.forEach((score) => {
+            flatScores.push({
+              level_uuid: level.level_uuid,
+              level_name: level.level_name,
+              score: score.score,
+              value_type: score.value_type,
+              timestamp: score.timestamp,
+              country: score.country,
             });
           });
-          setScores(flatScores);
-        }
-      } catch (error) {
-        console.error("Failed to fetch player data:", error);
-      } finally {
-        clearInterval(progressInterval);
-        setProgress(100);
-        setTimeout(() => {
-          setLoading(false);
-        }, 400);
+        });
+        setScores(flatScores);
+      } else {
+        setScores([]);
       }
-    }
-
-    fetchData();
-
-    return () => clearInterval(progressInterval);
+    });
   }, [uuid]);
 
   const renderPlacement = (title: string, placement: LeaderboardPlacement) => {
@@ -255,8 +229,8 @@ export default function PlayerProfilePage() {
 
   const [showAllHistory, setShowAllHistory] = useState(false);
 
-  const displayedHistory = showAllHistory ? history : history.slice(0, 5);
-  const latestUsername = history.length > 0 ? history[0].new_name : null;
+  const displayedHistory = history ? (showAllHistory ? history : history.slice(0, 5)) : [];
+  const latestUsername = history && history.length > 0 ? history[0].new_name : null;
 
   return (
     <div className="container-xl p-4">
@@ -296,280 +270,342 @@ export default function PlayerProfilePage() {
       </div>
 
       <div className="page-body">
-        {loading ? (
-          <div className="row justify-content-center mt-6">
-            <div className="col-md-8 col-lg-6 text-center">
-              <div className="mb-4">
-                <span className="text-muted h4 fw-normal">
-                  Getting Player Data...{" "}
-                  <span className="fw-bold">{Math.round(progress)}%</span>
-                </span>
+        <div className="row row-cards mb-4">
+          <div className="col-4">
+            {placements ? (
+              renderPlacement("Monthly", placements.monthly_leaderboard)
+            ) : (
+              <div className="card card-sm h-100">
+                <div className="card-body">
+                  <div className="subheader">Monthly</div>
+                  <div className="h3 m-0">
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Loading...
+                  </div>
+                </div>
               </div>
-              <div
-                className="progress progress-sm mb-3"
-                style={{
-                  height: "8px",
-                  borderRadius: "4px",
-                  background: "rgba(0,0,0,0.05)",
-                }}
+            )}
+          </div>
+          <div className="col-4">
+            {placements ? (
+              renderPlacement("XP", placements.xp_leaderboard)
+            ) : (
+              <div className="card card-sm h-100">
+                <div className="card-body">
+                  <div className="subheader">XP</div>
+                  <div className="h3 m-0">
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Loading...
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="col-4">
+            {placements ? (
+              renderPlacement("Blitz", placements.blitz_leaderboard)
+            ) : (
+              <div className="card card-sm h-100">
+                <div className="card-body">
+                  <div className="subheader">Blitz</div>
+                  <div className="h3 m-0">
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Loading...
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="row row-cards">
+          {xpHistory && xpHistory.length >= 2 ? (
+            <div className="col-md-6">
+              <div className="card mb-4">
+                <div className="card-body ps-0">
+                  <div className="ps-3">
+                    <div className="subheader mb-3">XP Growth</div>
+                  </div>
+                  <div
+                    className="position-relative"
+                    style={{ minHeight: "240px" }}
+                  >
+                    <Chart
+                      options={{
+                        chart: {
+                          type: "area",
+                          fontFamily: "inherit",
+                          height: 240,
+                          parentHeightOffset: 0,
+                          toolbar: {
+                            show: false,
+                          },
+                          animations: {
+                            enabled: false,
+                          },
+                        },
+                        dataLabels: {
+                          enabled: false,
+                        },
+                        fill: {
+                          colors: ["rgba(32, 107, 196, 0.16)"],
+                          type: "solid",
+                        },
+                        stroke: {
+                          width: 2,
+                          lineCap: "round",
+                          curve: "smooth",
+                        },
+                        tooltip: {
+                          theme: "dark",
+                          x: {
+                            format: "dd MMM yyyy HH:mm",
+                          },
+                        },
+                        grid: {
+                          padding: {
+                            top: -20,
+                            right: 0,
+                            left: -4,
+                            bottom: -4,
+                          },
+                          strokeDashArray: 4,
+                        },
+                        xaxis: {
+                          labels: {
+                            style: {
+                              colors:
+                                theme === "dark"
+                                  ? "rgba(255, 255, 255, 0.7)"
+                                  : "rgba(0, 0, 0, 0.7)",
+                            },
+                          },
+                          tooltip: {
+                            enabled: false,
+                          },
+                          axisBorder: {
+                            show: false,
+                          },
+                          type: "datetime",
+                        },
+                        yaxis: {
+                          labels: {
+                            formatter: (val) => val.toLocaleString(),
+                            style: {
+                              colors:
+                                theme === "dark"
+                                  ? "rgba(255, 255, 255, 0.7)"
+                                  : "rgba(0, 0, 0, 0.7)",
+                            },
+                          },
+                        },
+                        colors: ["#206bc4"],
+                      }}
+                      series={[
+                        {
+                          name: "XP",
+                          data: xpHistory.map((h) => ({
+                            x: h.timestamp * 1000,
+                            y: h.xp,
+                          })),
+                        },
+                      ]}
+                      type="area"
+                      height={240}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : xpHistory === null ? (
+            <div className="col-md-6">
+              <div className="card mb-4">
+                <div className="card-body ps-0">
+                  <div className="ps-3">
+                    <div className="subheader mb-3">XP Growth</div>
+                  </div>
+                  <div
+                    className="d-flex align-items-center justify-content-center"
+                    style={{ minHeight: "240px" }}
+                  >
+                    <span className="spinner-border text-primary" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {blitzHistory && blitzHistory.length >= 2 ? (
+            <div className="col-md-6">
+              <div className="card mb-4">
+                <div className="card-body ps-0">
+                  <div className="ps-3">
+                    <div className="subheader mb-3">Blitz Growth</div>
+                  </div>
+                  <div
+                    className="position-relative"
+                    style={{ minHeight: "240px" }}
+                  >
+                    <Chart
+                      options={{
+                        chart: {
+                          type: "area",
+                          fontFamily: "inherit",
+                          height: 240,
+                          parentHeightOffset: 0,
+                          toolbar: {
+                            show: false,
+                          },
+                          animations: {
+                            enabled: false,
+                          },
+                        },
+                        dataLabels: {
+                          enabled: false,
+                        },
+                        fill: {
+                          colors: ["rgba(174, 62, 201, 0.16)"],
+                          type: "solid",
+                        },
+                        stroke: {
+                          width: 2,
+                          lineCap: "round",
+                          curve: "smooth",
+                        },
+                        tooltip: {
+                          theme: "dark",
+                          x: {
+                            format: "dd MMM yyyy HH:mm",
+                          },
+                        },
+                        grid: {
+                          padding: {
+                            top: -20,
+                            right: 0,
+                            left: -4,
+                            bottom: -4,
+                          },
+                          strokeDashArray: 4,
+                        },
+                        xaxis: {
+                          labels: {
+                            style: {
+                              colors:
+                                theme === "dark"
+                                  ? "rgba(255, 255, 255, 0.7)"
+                                  : "rgba(0, 0, 0, 0.7)",
+                            },
+                          },
+                          tooltip: {
+                            enabled: false,
+                          },
+                          axisBorder: {
+                            show: false,
+                          },
+                          type: "datetime",
+                        },
+                        yaxis: {
+                          labels: {
+                            formatter: (val) =>
+                              Math.round(val).toLocaleString(),
+                            style: {
+                              colors:
+                                theme === "dark"
+                                  ? "rgba(255, 255, 255, 0.7)"
+                                  : "rgba(0, 0, 0, 0.7)",
+                            },
+                          },
+                        },
+                        colors: ["#ae3ec9"],
+                      }}
+                      series={[
+                        {
+                          name: "BSR",
+                          data: blitzHistory.map((h) => ({
+                            x: h.timestamp * 1000,
+                            y: h.bsr,
+                          })),
+                        },
+                      ]}
+                      type="area"
+                      height={240}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : blitzHistory === null ? (
+            <div className="col-md-6">
+              <div className="card mb-4">
+                <div className="card-body ps-0">
+                  <div className="ps-3">
+                    <div className="subheader mb-3">Blitz Growth</div>
+                  </div>
+                  <div
+                    className="d-flex align-items-center justify-content-center"
+                    style={{ minHeight: "240px" }}
+                  >
+                    <span className="spinner-border text-primary" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {history && history.length > 1 ? (
+          <div className="mt-2 mb-4">
+            <div className="subheader mb-2">Username History</div>
+            <div className="text-muted small">
+              {displayedHistory.map((change, index) => (
+                <div key={index} className="mb-1">
+                  {new Date(change.timestamp * 1000).toLocaleString()} -{" "}
+                  <span className="fw-bold text-reset">
+                    <ColorizedText text={change.new_name} />
+                  </span>
+                </div>
+              ))}
+            </div>
+            {history.length > 5 && (
+              <button
+                className="btn btn-link btn-sm p-0 mt-1"
+                onClick={() => setShowAllHistory(!showAllHistory)}
               >
-                <div
-                  className="progress-bar bg-primary progress-bar-striped progress-bar-animated"
-                  style={{
-                    width: `${progress}%`,
-                    transition: "width 0.3s ease-out",
-                    boxShadow: "0 0 10px rgba(32, 107, 196, 0.4)",
-                  }}
-                ></div>
-              </div>
+                {showAllHistory
+                  ? "Show less"
+                  : `Show ${history.length - 5} more...`}
+              </button>
+            )}
+          </div>
+        ) : history === null ? (
+          <div className="mt-2 mb-4">
+            <div className="subheader mb-2">Username History</div>
+            <div className="text-muted small d-flex align-items-center">
+              <span className="spinner-border spinner-border-sm me-2" />
+              Loading...
             </div>
           </div>
-        ) : (
-          <>
-            {placements && (
-              <div className="row row-cards mb-4">
-                <div className="col-4">
-                  {renderPlacement("Monthly", placements.monthly_leaderboard)}
-                </div>
-                <div className="col-4">
-                  {renderPlacement("XP", placements.xp_leaderboard)}
-                </div>
-                <div className="col-4">
-                  {renderPlacement("Blitz", placements.blitz_leaderboard)}
-                </div>
-              </div>
-            )}
+        ) : null}
 
-            <div className="row row-cards">
-              {xpHistory.length >= 2 && (
-                <div className="col-md-6">
-                  <div className="card mb-4">
-                    <div className="card-body ps-0">
-                      <div className="ps-3">
-                        <div className="subheader mb-3">XP Growth</div>
-                      </div>
-                      <div
-                        className="position-relative"
-                        style={{ minHeight: "240px" }}
-                      >
-                        <Chart
-                          options={{
-                            chart: {
-                              type: "area",
-                              fontFamily: "inherit",
-                              height: 240,
-                              parentHeightOffset: 0,
-                              toolbar: {
-                                show: false,
-                              },
-                              animations: {
-                                enabled: false,
-                              },
-                            },
-                            dataLabels: {
-                              enabled: false,
-                            },
-                            fill: {
-                              colors: ["rgba(32, 107, 196, 0.16)"],
-                              type: "solid",
-                            },
-                            stroke: {
-                              width: 2,
-                              lineCap: "round",
-                              curve: "smooth",
-                            },
-                            tooltip: {
-                              theme: "dark",
-                              x: {
-                                format: "dd MMM yyyy HH:mm",
-                              },
-                            },
-                            grid: {
-                              padding: {
-                                top: -20,
-                                right: 0,
-                                left: -4,
-                                bottom: -4,
-                              },
-                              strokeDashArray: 4,
-                            },
-                            xaxis: {
-                              labels: {
-                                style: {
-                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-                                },
-                              },
-                              tooltip: {
-                                enabled: false,
-                              },
-                              axisBorder: {
-                                show: false,
-                              },
-                              type: "datetime",
-                            },
-                            yaxis: {
-                              labels: {
-                                formatter: (val) => val.toLocaleString(),
-                                style: {
-                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-                                },
-                              },
-                            },
-                            colors: ["#206bc4"],
-                          }}
-                          series={[
-                            {
-                              name: "XP",
-                              data: xpHistory.map((h) => ({
-                                x: h.timestamp * 1000,
-                                y: h.xp,
-                              })),
-                            },
-                          ]}
-                          type="area"
-                          height={240}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {blitzHistory.length >= 2 && (
-                <div className="col-md-6">
-                  <div className="card mb-4">
-                    <div className="card-body ps-0">
-                      <div className="ps-3">
-                        <div className="subheader mb-3">Blitz Growth</div>
-                      </div>
-                      <div
-                        className="position-relative"
-                        style={{ minHeight: "240px" }}
-                      >
-                        <Chart
-                          options={{
-                            chart: {
-                              type: "area",
-                              fontFamily: "inherit",
-                              height: 240,
-                              parentHeightOffset: 0,
-                              toolbar: {
-                                show: false,
-                              },
-                              animations: {
-                                enabled: false,
-                              },
-                            },
-                            dataLabels: {
-                              enabled: false,
-                            },
-                            fill: {
-                              colors: ["rgba(174, 62, 201, 0.16)"],
-                              type: "solid",
-                            },
-                            stroke: {
-                              width: 2,
-                              lineCap: "round",
-                              curve: "smooth",
-                            },
-                            tooltip: {
-                              theme: "dark",
-                              x: {
-                                format: "dd MMM yyyy HH:mm",
-                              },
-                            },
-                            grid: {
-                              padding: {
-                                top: -20,
-                                right: 0,
-                                left: -4,
-                                bottom: -4,
-                              },
-                              strokeDashArray: 4,
-                            },
-                            xaxis: {
-                              labels: {
-                                style: {
-                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-                                },
-                              },
-                              tooltip: {
-                                enabled: false,
-                              },
-                              axisBorder: {
-                                show: false,
-                              },
-                              type: "datetime",
-                            },
-                            yaxis: {
-                              labels: {
-                                formatter: (val) =>
-                                  Math.round(val).toLocaleString(),
-                                style: {
-                                  colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-                                },
-                              },
-                            },
-                            colors: ["#ae3ec9"],
-                          }}
-                          series={[
-                            {
-                              name: "BSR",
-                              data: blitzHistory.map((h) => ({
-                                x: h.timestamp * 1000,
-                                y: h.bsr,
-                              })),
-                            },
-                          ]}
-                          type="area"
-                          height={240}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+        {scores && scores.length > 0 ? (
+          <div>
+            <DataTable
+              data={scores}
+              columns={columns}
+              title="Player Scores"
+              defaultSort={[{ id: "timestamp", desc: true }]}
+              showRowNumbers={false}
+            />
+          </div>
+        ) : scores === null ? (
+          <div className="mt-2 mb-4">
+            <div className="subheader mb-2">Player Scores</div>
+            <div className="text-muted small d-flex align-items-center">
+              <span className="spinner-border spinner-border-sm me-2" />
+              Loading...
             </div>
-
-            {history.length > 1 && (
-              <div className="mt-2 mb-4">
-                <div className="subheader mb-2">Username History</div>
-                <div className="text-muted small">
-                  {displayedHistory.map((change, index) => (
-                    <div key={index} className="mb-1">
-                      {new Date(change.timestamp * 1000).toLocaleString()} -{" "}
-                      <span className="fw-bold text-reset">
-                        <ColorizedText text={change.new_name} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {history.length > 5 && (
-                  <button
-                    className="btn btn-link btn-sm p-0 mt-1"
-                    onClick={() => setShowAllHistory(!showAllHistory)}
-                  >
-                    {showAllHistory
-                      ? "Show less"
-                      : `Show ${history.length - 5} more...`}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {scores.length > 0 && (
-              <div>
-                <DataTable
-                  data={scores}
-                  columns={columns}
-                  title="Player Scores"
-                  defaultSort={[{ id: "timestamp", desc: true }]}
-                  showRowNumbers={false}
-                />
-              </div>
-            )}
-          </>
-        )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

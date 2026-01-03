@@ -88,22 +88,27 @@ export default function ComparePage() {
   const [playersData, setPlayersData] = useState<PlayerData[]>([]);
   const [comparisonData, setComparisonData] = useState<ComparisonRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [availablePlayers, setAvailablePlayers] = useState<PlayerShortInfo[]>([]);
+  const [availablePlayers, setAvailablePlayers] = useState<PlayerShortInfo[]>(
+    [],
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [showMobileList, setShowMobileList] = useState(false);
 
   useEffect(() => {
-    api.get("/v1/data/get_players")
-      .then(res => setAvailablePlayers(res.data.players))
-      .catch(err => console.error("Error fetching players:", err));
+    api
+      .get("/v1/data/get_players")
+      .then((res) => setAvailablePlayers(res.data.players))
+      .catch((err) => console.error("Error fetching players:", err));
   }, []);
 
   const filteredPlayers = useMemo(() => {
     if (!searchTerm) return [];
     const lowerSearch = searchTerm.toLowerCase();
     return availablePlayers
-      .filter((p) => stripColorCodes(p.username).toLowerCase().includes(lowerSearch))
+      .filter((p) =>
+        stripColorCodes(p.username).toLowerCase().includes(lowerSearch),
+      )
       .slice(0, 50); // Show up to 50 matches
   }, [searchTerm, availablePlayers]);
 
@@ -122,8 +127,8 @@ export default function ComparePage() {
             await Promise.all([
               api.get(`/v1/player/${uuid}/get_username_change_history`),
               api.get(`/v1/player/${uuid}/get_leaderboard_placements`),
-              api.get(`/v1/player/${uuid}/get_xp_history?sample_rate=1200`),
-              api.get(`/v1/player/${uuid}/get_blitz_history?sample_rate=60`),
+              api.get(`/v1/player/${uuid}/get_xp_history`),
+              api.get(`/v1/player/${uuid}/get_blitz_history`),
             ]);
 
           const history = historyRes.data.changes;
@@ -377,7 +382,10 @@ export default function ComparePage() {
       xaxis: {
         labels: {
           style: {
-            colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+            colors:
+              theme === "dark"
+                ? "rgba(255, 255, 255, 0.7)"
+                : "rgba(0, 0, 0, 0.7)",
           },
         },
         tooltip: {
@@ -420,7 +428,10 @@ export default function ComparePage() {
                       labels: {
                         formatter: (val: number) => val.toLocaleString(),
                         style: {
-                          colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                          colors:
+                            theme === "dark"
+                              ? "rgba(255, 255, 255, 0.7)"
+                              : "rgba(0, 0, 0, 0.7)",
                         },
                       },
                     },
@@ -448,7 +459,10 @@ export default function ComparePage() {
                         formatter: (val: number) =>
                           Math.round(val).toLocaleString(),
                         style: {
-                          colors: theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                          colors:
+                            theme === "dark"
+                              ? "rgba(255, 255, 255, 0.7)"
+                              : "rgba(0, 0, 0, 0.7)",
                         },
                       },
                     },
@@ -665,7 +679,10 @@ export default function ComparePage() {
                       />
                     </div>
                     {searchTerm && (
-                      <div className="list-group list-group-flush border rounded-2" style={{ maxHeight: "300px", overflowY: "auto" }}>
+                      <div
+                        className="list-group list-group-flush border rounded-2"
+                        style={{ maxHeight: "300px", overflowY: "auto" }}
+                      >
                         {filteredPlayers.length > 0 ? (
                           filteredPlayers.map((p) => (
                             <button
