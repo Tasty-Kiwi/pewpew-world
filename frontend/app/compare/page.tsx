@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import api from "@/helpers/api";
+import { stripColorCodes } from "@/helpers/text-utils";
 import ColorizedText from "@/components/colorized-text";
 import DataTable from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -289,58 +290,141 @@ export default function ComparePage() {
 
   const renderCharts = () => {
     const xpSeries = playersData.map((p) => ({
-      name: p.name, // We'll assume simple text name for chart legend for now
+      name: stripColorCodes(p.name),
       data: p.xpHistory.map((h) => ({ x: h.timestamp * 1000, y: h.xp })),
     }));
 
     const blitzSeries = playersData.map((p) => ({
-      name: p.name,
+      name: stripColorCodes(p.name),
       data: p.blitzHistory.map((h) => ({ x: h.timestamp * 1000, y: h.bsr })),
     }));
 
+    const CHART_COLORS = [
+      "#206bc4", // Blue
+      "#ae3ec9", // Purple
+      "#d63939", // Red
+      "#f76707", // Orange
+      "#f59f00", // Yellow
+      "#74b816", // Lime
+      "#e83e8c", // Pink
+      "#343a40", // Dark Gray
+      "#2fb344", // Green
+      "#1098ad", // Teal
+    ];
+
+    const commonOptions: any = {
+      chart: {
+        type: "line",
+        fontFamily: "inherit",
+        height: 240,
+        parentHeightOffset: 0,
+        toolbar: {
+          show: false,
+        },
+        animations: {
+          enabled: false,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      // fill: {
+      //   type: "solid",
+      //   opacity: 0.16,
+      // },
+      stroke: {
+        width: 2,
+        lineCap: "round",
+        curve: "smooth",
+      },
+      tooltip: {
+        theme: "dark",
+        x: {
+          format: "dd MMM yyyy HH:mm",
+        },
+      },
+      grid: {
+        padding: {
+          top: -20,
+          right: 0,
+          left: -4,
+          bottom: -4,
+        },
+        strokeDashArray: 4,
+      },
+      xaxis: {
+        labels: {},
+        tooltip: {
+          enabled: false,
+        },
+        axisBorder: {
+          show: false,
+        },
+        type: "datetime",
+      },
+      legend: {
+        position: "top",
+        labels: {
+          colors: "#fff",
+        },
+        itemMargin: {
+          horizontal: 10,
+          vertical: 5,
+        },
+        markers: {
+          offsetX: -4,
+        },
+      },
+      colors: CHART_COLORS,
+    };
+
     return (
-      <div className="row row-cards mb-4">
+      <div className="row row-cards">
         <div className="col-md-6">
-          <div className="card">
-            <div className="card-body">
-              <h3 className="card-title">XP Growth</h3>
-              <Chart
-                options={{
-                  chart: {
-                    type: "line",
-                    height: 300,
-                    toolbar: { show: false },
-                  },
-                  xaxis: { type: "datetime" },
-                  stroke: { curve: "smooth", width: 2 },
-                  legend: { position: "top" },
-                }}
-                series={xpSeries}
-                type="line"
-                height={300}
-              />
+          <div className="card mb-4">
+            <div className="card-body ps-0">
+              <div className="ps-3">
+                <div className="subheader mb-3">XP Growth</div>
+              </div>
+              <div className="position-relative" style={{ minHeight: "240px" }}>
+                <Chart
+                  options={{
+                    ...commonOptions,
+                    yaxis: {
+                      labels: {
+                        formatter: (val: number) => val.toLocaleString(),
+                      },
+                    },
+                  }}
+                  series={xpSeries}
+                  height={240}
+                />
+              </div>
             </div>
           </div>
         </div>
+
         <div className="col-md-6">
-          <div className="card">
-            <div className="card-body">
-              <h3 className="card-title">Blitz Growth</h3>
-              <Chart
-                options={{
-                  chart: {
-                    type: "line",
-                    height: 300,
-                    toolbar: { show: false },
-                  },
-                  xaxis: { type: "datetime" },
-                  stroke: { curve: "smooth", width: 2 },
-                  legend: { position: "top" },
-                }}
-                series={blitzSeries}
-                type="line"
-                height={300}
-              />
+          <div className="card mb-4">
+            <div className="card-body ps-0">
+              <div className="ps-3">
+                <div className="subheader mb-3">Blitz Growth</div>
+              </div>
+              <div className="position-relative" style={{ minHeight: "240px" }}>
+                <Chart
+                  options={{
+                    ...commonOptions,
+                    yaxis: {
+                      labels: {
+                        formatter: (val: number) =>
+                          Math.round(val).toLocaleString(),
+                      },
+                    },
+                  }}
+                  series={blitzSeries}
+                  height={240}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -355,12 +439,14 @@ export default function ComparePage() {
         header: "Level",
         cell: ({ row }) => (
           <div>
-            {row.original.value_type === 1 && (
-              <span className="me-2" title="Speedrun">
-                ⚡
-              </span>
-            )}
-            <ColorizedText text={row.original.level_name} />
+            <div className="text-truncate" style={{ maxWidth: "180px" }}>
+              {row.original.value_type === 1 && (
+                <span className="me-2" title="Speedrun">
+                  ⚡
+                </span>
+              )}
+              <ColorizedText text={row.original.level_name} />
+            </div>
           </div>
         ),
       },
