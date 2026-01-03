@@ -117,6 +117,7 @@ const scoreCalculation = (
 export default function MonthlyLeaderboardPage() {
   const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [levels, setLevels] = useState<LevelInfo[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -127,6 +128,7 @@ export default function MonthlyLeaderboardPage() {
         );
         setData(response.data.leaderboard);
         setLevels(response.data.levels);
+        setLastUpdated(response.data.timestamp);
       } catch (error) {
         console.error("Failed to fetch leaderboard:", error);
       } finally {
@@ -194,12 +196,19 @@ export default function MonthlyLeaderboardPage() {
           <div className="spinner-border" role="status"></div>
         </div>
       ) : (
-        <DataTable
-          data={data}
-          columns={columns}
-          defaultSort={[{ id: "score", desc: true }]}
-          title="Monthly Leaderboard"
-        />
+        <>
+          {lastUpdated && (
+            <div className="mb-2 text-muted">
+              Last updated at: {new Date(lastUpdated * 1000).toLocaleString()}
+            </div>
+          )}
+          <DataTable
+            data={data}
+            columns={columns}
+            defaultSort={[{ id: "score", desc: true }]}
+            title="Monthly Leaderboard"
+          />
+        </>
       )}
     </div>
   );
