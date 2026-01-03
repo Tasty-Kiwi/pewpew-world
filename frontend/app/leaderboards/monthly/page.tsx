@@ -153,7 +153,7 @@ export default function MonthlyLeaderboardPage() {
         monthly leaderboard.
       </p>
       <div className="btn-list">
-        <ChevronButton label="Leaderboard Archive" />
+        <ChevronButton label="Archive" />
         <ChevronButton label="Past levels" />
       </div>
 

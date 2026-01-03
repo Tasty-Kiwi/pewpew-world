@@ -4,6 +4,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import TablerScript from "@/components/tabler-script";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -45,6 +46,7 @@ export default function RootLayout({
           <div className="page">
             <Navbar />
             <div className="page-wrapper">{children}</div>
+            <Footer />
           </div>
         </ThemeProvider>
       </body>
