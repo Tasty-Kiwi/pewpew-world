@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import orjson
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -495,7 +494,7 @@ async def get_xp_leaderboard_uptime(year: int, month: int):
     )
     days_in_month = (next_month - timedelta(days=1)).day
 
-    month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+    # month_start = datetime(year, month, 1, tzinfo=timezone.utc)
     month_end = (
         datetime(year, month + 1, 1, tzinfo=timezone.utc)
         if month < 12
@@ -591,7 +590,7 @@ async def get_blitz_leaderboard_uptime(year: int, month: int):
     )
     days_in_month = (next_month - timedelta(days=1)).day
 
-    month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+    # month_start = datetime(year, month, 1, tzinfo=timezone.utc)
     month_end = (
         datetime(year, month + 1, 1, tzinfo=timezone.utc)
         if month < 12
@@ -726,82 +725,64 @@ async def get_quests_uptime(year: int, month: int):
     return MonthUptimeResponse(year=year, month=month, days=days)
 
 
-def extract_history(
-    uuid: str,
-    sample_rate: int,
-    archive_dir: Path,
-    data_key: str,
-    model_class,
-):
-    """Extracts history points from json archives with optimized sampling and orjson."""
-    history = []
-    snapshot_counter = 0
-
-    for archive_file in sorted(archive_dir.glob("*_lb_*.json")):
-        with open(archive_file, "rb") as f:
-            archive = orjson.loads(f.read())
-
-        for entry in archive:
-            if snapshot_counter % sample_rate == 0:
-                timestamp = entry.get("timestamp", 0)
-
-                player_data = next(
-                    (p for p in entry.get("data", []) if p.get("acc") == uuid), None
-                )
-
-                if player_data:
-                    history.append(
-                        model_class(
-                            timestamp=timestamp,
-                            **{data_key: int(player_data.get(data_key, 0))},
-                        )
-                    )
-
-            snapshot_counter += 1
-
-    return history
-
-
 @router.get(
     "/player/{uuid}/get_xp_history",
     summary="Get player XP history",
-    description="Retrieves XP value history for a specific player across all archive files",
+    description="Retrieves XP value history for a specific player from player data",
     tags=["player"],
     response_model=PlayerXPHistoryResponse,
 )
-async def get_player_xp_history(uuid: str, sample_rate: int = 1):
-    if sample_rate < 1:
-        raise HTTPException(status_code=400, detail="Sample rate must be at least 1")
-
+async def get_player_xp_history(uuid: str):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
-    xp_archive_dir = base_path / "xp_lb_archive"
+    player_data_path = base_path / "player_data/player_changes.json"
 
-    sampled_entries = extract_history(
-        uuid, sample_rate, xp_archive_dir, "xp", PlayerXPHistoryPoint
-    )
+    if not player_data_path.exists():
+        return PlayerXPHistoryResponse(player_uuid=uuid, history=[])
 
-    return PlayerXPHistoryResponse(player_uuid=uuid, history=sampled_entries)
+    with open(player_data_path, "r") as f:
+        player_data = json.load(f)
+
+    player = player_data.get(uuid)
+    if not player:
+        return PlayerXPHistoryResponse(player_uuid=uuid, history=[])
+
+    xp_changes = player.get("xp_changes", [])
+    history = [
+        PlayerXPHistoryPoint(timestamp=entry["timestamp"], xp=entry["xp"])
+        for entry in xp_changes
+    ]
+
+    return PlayerXPHistoryResponse(player_uuid=uuid, history=history)
 
 
 @router.get(
     "/player/{uuid}/get_blitz_history",
     summary="Get player blitz history",
-    description="Retrieves blitz rating history for a specific player across all archive files",
+    description="Retrieves blitz rating history for a specific player from player data",
     tags=["player"],
     response_model=PlayerBlitzHistoryResponse,
 )
-async def get_player_blitz_history(uuid: str, sample_rate: int = 1):
-    if sample_rate < 1:
-        raise HTTPException(status_code=400, detail="Sample rate must be at least 1")
-
+async def get_player_blitz_history(uuid: str):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
-    blitz_archive_dir = base_path / "blitz_lb_archive"
+    player_data_path = base_path / "player_data/player_changes.json"
 
-    sampled_entries = extract_history(
-        uuid, sample_rate, blitz_archive_dir, "bsr", PlayerBlitzHistoryPoint
-    )
+    if not player_data_path.exists():
+        return PlayerBlitzHistoryResponse(player_uuid=uuid, history=[])
 
-    return PlayerBlitzHistoryResponse(player_uuid=uuid, history=sampled_entries)
+    with open(player_data_path, "r") as f:
+        player_data = json.load(f)
+
+    player = player_data.get(uuid)
+    if not player:
+        return PlayerBlitzHistoryResponse(player_uuid=uuid, history=[])
+
+    blitz_changes = player.get("blitz_changes", [])
+    history = [
+        PlayerBlitzHistoryPoint(timestamp=entry["timestamp"], bsr=entry["bsr"])
+        for entry in blitz_changes
+    ]
+
+    return PlayerBlitzHistoryResponse(player_uuid=uuid, history=history)
 
 
 @router.get(
@@ -881,41 +862,29 @@ async def get_player_leaderboard_placements(uuid: str):
 @router.get(
     "/player/{uuid}/get_username_change_history",
     summary="Get player username change history",
-    description="Retrieves history of username changes for a specific player",
+    description="Retrieves history of username changes for a specific player from player data",
     tags=["player"],
     response_model=UsernameChangeHistoryResponse,
 )
 async def get_username_change_history(uuid: str):
     base_path = Path(__file__).parent.parent.parent.parent.parent / "data/data"
-    xp_archive_dir = base_path / "xp_lb_archive"
+    player_data_path = base_path / "player_data/player_changes.json"
 
-    all_entries = []
+    if not player_data_path.exists():
+        return UsernameChangeHistoryResponse(player_uuid=uuid, changes=[])
 
-    for archive_file in sorted(xp_archive_dir.glob("xp_lb_*.json")):
-        with open(archive_file, "r") as f:
-            archive = json.load(f)
+    with open(player_data_path, "r") as f:
+        player_data = json.load(f)
 
-        for entry in archive:
-            timestamp = entry.get("timestamp", 0)
-            for player in entry.get("data", []):
-                if player.get("acc") == uuid:
-                    all_entries.append(
-                        {"timestamp": timestamp, "name": player.get("name", "")}
-                    )
-                    break
+    player = player_data.get(uuid)
+    if not player:
+        return UsernameChangeHistoryResponse(player_uuid=uuid, changes=[])
 
-    all_entries.sort(key=lambda x: x["timestamp"])
-
-    changes = []
-    previous_name = None
-
-    for entry in all_entries:
-        current_name = entry["name"]
-        if previous_name is None or current_name != previous_name:
-            changes.append(
-                UsernameChange(timestamp=entry["timestamp"], new_name=current_name)
-            )
-            previous_name = current_name
+    username_entries = player.get("usernames", [])
+    changes = [
+        UsernameChange(timestamp=entry["timestamp"], new_name=entry["name"])
+        for entry in username_entries
+    ]
 
     return UsernameChangeHistoryResponse(player_uuid=uuid, changes=changes)
 
