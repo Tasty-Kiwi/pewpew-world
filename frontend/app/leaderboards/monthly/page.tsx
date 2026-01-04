@@ -114,6 +114,30 @@ const scoreCalculation = (
   </>
 );
 
+const credits = (
+  <>
+    <p>
+      Original monthly leaderboards were a collaboration between{" "}
+      <a href="https://github.com/artiekra">me</a> and{" "}
+      <a href="https://github.com/glebi574">glebi574</a>. Thanks to glebi574 for
+      the idea and original implementation of score calculation script, which
+      can be found{" "}
+      <a href="https://github.com/glebi574/ppl-process-scores">here</a>.
+    </p>
+    <p>
+      New script replacing the old monthly leaderboard calculations can be found{" "}
+      <a href="https://github.com/artiekra/pewpew-world/blob/main/data/modules/monthly_lb_daily.py">
+        here
+      </a>
+      .
+    </p>
+    <p>
+      Monthly leaderboards continue to work with the original score calculation
+      rules since August 2024!
+    </p>
+  </>
+);
+
 export default function MonthlyLeaderboardPage() {
   const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [levels, setLevels] = useState<LevelInfo[]>([]);
@@ -163,6 +187,9 @@ export default function MonthlyLeaderboardPage() {
         </AccordionItem>
         <AccordionItem id="two" title="Score calculation">
           {scoreCalculation}
+        </AccordionItem>
+        <AccordionItem id="three" title="Credits">
+          {credits}
         </AccordionItem>
       </Accordion>
 
