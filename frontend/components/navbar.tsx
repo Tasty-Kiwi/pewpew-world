@@ -5,11 +5,9 @@ import {
   IconHome,
   IconTrophy,
   IconArchive,
-  IconUsers,
   IconCode,
   IconSun,
   IconMoon,
-  IconExternalLink,
 } from "@tabler/icons-react";
 import { useTheme } from "@/components/theme-provider";
 
@@ -86,6 +84,7 @@ export default function Navbar() {
   return (
     <header className="navbar navbar-expand-md navbar-light d-print-none">
       <div className="container-xl">
+        {/* 1. Toggler (Left on Mobile) */}
         <button
           className="navbar-toggler"
           type="button"
@@ -98,7 +97,8 @@ export default function Navbar() {
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        <h1 className="navbar-brand d-none-navbar-horizontal pe-0 pe-md-3">
+        {/* 2. Logo (Centered on Mobile via mx-auto) */}
+        <h1 className="navbar-brand d-none-navbar-horizontal pe-0 pe-md-3 mx-auto ms-md-0">
           <Link href="/">
             <img
               src="/favicon.png"
@@ -110,6 +110,16 @@ export default function Navbar() {
           </Link>
         </h1>
 
+        {/* 3. Theme Switcher (Right on Mobile, pushed to End on Desktop via order-md-last) */}
+        <button
+          className="btn btn-icon nav-link order-md-last"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? <IconSun size={24} /> : <IconMoon size={24} />}
+        </button>
+
+        {/* 4. Menu Items (Collapsible, Centers on Desktop) */}
         <div className="collapse navbar-collapse" id="navbar-menu">
           <div className="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
             <ul className="navbar-nav">
@@ -159,14 +169,6 @@ export default function Navbar() {
             </ul>
           </div>
         </div>
-
-        <button
-          className="btn btn-icon nav-link"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-        >
-          {theme === "dark" ? <IconSun size={24} /> : <IconMoon size={24} />}
-        </button>
       </div>
     </header>
   );
