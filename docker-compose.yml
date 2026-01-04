@@ -10,6 +10,7 @@ services:
       - shared_proxy
     volumes:
       - ./storage:/storage
+      - ./.env:/app/.env
     restart: unless-stopped
     command: python backend/main.py
 
@@ -19,6 +20,7 @@ services:
       dockerfile: Dockerfile.backend
     volumes:
       - ./storage:/storage
+      - ./.env:/app/.env
     command: python data/main.py
 
   frontend:
@@ -30,6 +32,8 @@ services:
       - "3090:3000"
     networks:
       - shared_proxy
+    volumes:
+      - ./.env:/.env
     restart: unless-stopped
 
 networks:
