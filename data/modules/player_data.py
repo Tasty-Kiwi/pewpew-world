@@ -2,12 +2,15 @@ import json
 import os
 from datetime import datetime
 
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv()
 
 
 def run():
     """Track player data changes from XP and Blitz leaderboard archives."""
-    data_dir = "/storage"
+    data_dir = os.getenv("STORAGE_PATH", "/storage")
 
     output_dir = os.path.join(data_dir, "player_data")
     os.makedirs(output_dir, exist_ok=True)

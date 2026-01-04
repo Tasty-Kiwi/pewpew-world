@@ -5,7 +5,10 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv()
 
 OFFICIAL_LEVEL_NAMES = {
     "asteroids",
@@ -22,7 +25,7 @@ OFFICIAL_LEVEL_NAMES = {
 
 
 def run():
-    data_dir = "/storage"
+    data_dir = os.getenv("STORAGE_PATH", "/storage")
     score_data_path = os.path.join(data_dir, "github_data", "score_data.csv")
     output_path = os.path.join(data_dir, "speedrun_lb_daily", "leaderboard.csv")
 

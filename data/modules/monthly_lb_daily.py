@@ -4,11 +4,14 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv()
 
 
 def run():
-    data_dir = "/storage"
+    data_dir = os.getenv("STORAGE_PATH", "/storage")
     score_data_path = os.path.join(data_dir, "github_data", "score_data.csv")
     levels_path = os.path.join(data_dir, "monthly_lb_monthly", "levels.txt")
     output_path = os.path.join(data_dir, "monthly_lb_daily", "leaderboard.csv")

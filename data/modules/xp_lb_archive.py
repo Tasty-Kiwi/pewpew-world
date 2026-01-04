@@ -3,16 +3,19 @@ import os
 from datetime import datetime
 
 import requests
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv()
 
 
 def run():
     """
     Fetches XP leaderboard data from https://pewpew.live/get_xp_leaderboard
-    and saves it to data/data/xp_lb_archive/xp_lb_{month}_{year}.json
+    and saves it to {STORAGE_PATH}/xp_lb_archive/xp_lb_{month}_{year}.json
     """
     url = "https://pewpew.live/get_xp_leaderboard"
-    data_dir = "/storage"
+    data_dir = os.getenv("STORAGE_PATH", "/storage")
     archive_dir = os.path.join(data_dir, "xp_lb_archive")
     
     now = datetime.now()

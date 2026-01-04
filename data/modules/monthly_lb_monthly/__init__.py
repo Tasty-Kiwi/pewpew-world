@@ -4,7 +4,10 @@ import os
 import random
 from datetime import datetime
 
+from dotenv import load_dotenv
 from loguru import logger
+
+load_dotenv()
 
 
 def run():
@@ -14,7 +17,7 @@ def run():
     """
     module_dir = os.path.dirname(__file__)
     config_path = os.path.join(module_dir, "config.json")
-    data_dir = "/storage"
+    data_dir = os.getenv("STORAGE_PATH", "/storage")
     level_data_path = os.path.join(data_dir, "github_data", "level_data.csv")
     output_dir = os.path.join(data_dir, "monthly_lb_monthly")
     output_path = os.path.join(output_dir, "levels.txt")

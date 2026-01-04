@@ -4,8 +4,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+
+import os
+
+load_dotenv()
+
+STORAGE_PATH = os.getenv("STORAGE_PATH", "/storage")
 
 router = APIRouter()
 
@@ -211,7 +218,7 @@ async def health():
     response_model=MonthlyLeaderboardResponse,
 )
 async def get_monthly_leaderboard():
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
 
     leaderboard_path = base_path / "monthly_lb_daily/leaderboard.csv"
     levels_path = base_path / "monthly_lb_monthly/levels.txt"
@@ -280,7 +287,7 @@ async def get_monthly_leaderboard():
     response_model=SpeedrunLeaderboardResponse,
 )
 async def get_speedrun_leaderboard():
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
 
     leaderboard_path = base_path / "speedrun_lb_daily/leaderboard.csv"
     metadata_path = base_path / "github_data/metadata.json"
@@ -329,7 +336,7 @@ async def get_speedrun_leaderboard():
     response_model=MonthlyLeaderboardResponse,
 )
 async def get_archived_monthly_leaderboard(year: int, month: int):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = (
         base_path / f"monthly_lb_daily/archive/monthly_lb_{month:02d}_{year}.json"
     )
@@ -406,7 +413,7 @@ async def get_archived_monthly_leaderboard(year: int, month: int):
     response_model=MonthlyLevelsResponse,
 )
 async def get_monthly_leaderboard_levels(year: int, month: int):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = base_path / "monthly_lb_monthly/levels_archive.json"
 
     with open(archive_path, "r") as f:
@@ -450,7 +457,7 @@ def find_closest_timestamp(
 )
 async def get_archived_xp_leaderboard(timestamp: float):
     dt = datetime.fromtimestamp(timestamp)
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = base_path / f"xp_lb_archive/xp_lb_{dt.month:02d}_{dt.year}.json"
 
     if not archive_path.exists():
@@ -476,7 +483,7 @@ async def get_archived_xp_leaderboard(timestamp: float):
     response_model=MonthUptimeResponse,
 )
 async def get_xp_leaderboard_uptime(year: int, month: int):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = base_path / f"xp_lb_archive/xp_lb_{month:02d}_{year}.json"
 
     if not archive_path.exists():
@@ -544,7 +551,7 @@ async def get_xp_leaderboard_uptime(year: int, month: int):
 )
 async def get_archived_blitz_leaderboard(timestamp: float):
     dt = datetime.fromtimestamp(timestamp)
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = (
         base_path / f"blitz_lb_archive/blitz_lb_{dt.month:02d}_{dt.year}.json"
     )
@@ -572,7 +579,7 @@ async def get_archived_blitz_leaderboard(timestamp: float):
     response_model=MonthUptimeResponse,
 )
 async def get_blitz_leaderboard_uptime(year: int, month: int):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = base_path / f"blitz_lb_archive/blitz_lb_{month:02d}_{year}.json"
 
     if not archive_path.exists():
@@ -639,7 +646,7 @@ async def get_blitz_leaderboard_uptime(year: int, month: int):
     response_model=QuestResponse,
 )
 async def get_archived_quests(year: int, month: int, day: int):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = base_path / f"quests_archive/quests_{month:02d}_{year}.json"
 
     if not archive_path.exists():
@@ -679,7 +686,7 @@ async def get_archived_quests(year: int, month: int, day: int):
     response_model=MonthUptimeResponse,
 )
 async def get_quests_uptime(year: int, month: int):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     archive_path = base_path / f"quests_archive/quests_{month:02d}_{year}.json"
 
     if not archive_path.exists():
@@ -733,7 +740,7 @@ async def get_quests_uptime(year: int, month: int):
     response_model=PlayerXPHistoryResponse,
 )
 async def get_player_xp_history(uuid: str):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     player_data_path = base_path / "player_data/player_changes.json"
 
     if not player_data_path.exists():
@@ -763,7 +770,7 @@ async def get_player_xp_history(uuid: str):
     response_model=PlayerBlitzHistoryResponse,
 )
 async def get_player_blitz_history(uuid: str):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     player_data_path = base_path / "player_data/player_changes.json"
 
     if not player_data_path.exists():
@@ -793,7 +800,7 @@ async def get_player_blitz_history(uuid: str):
     response_model=PlayerLeaderboardPlacementsResponse,
 )
 async def get_player_leaderboard_placements(uuid: str):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
 
     monthly_placement = LeaderboardPlacement(
         timestamp=0.0, placement=None, not_found=True
@@ -867,7 +874,7 @@ async def get_player_leaderboard_placements(uuid: str):
     response_model=UsernameChangeHistoryResponse,
 )
 async def get_username_change_history(uuid: str):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     player_data_path = base_path / "player_data/player_changes.json"
 
     if not player_data_path.exists():
@@ -899,7 +906,7 @@ async def get_username_change_history(uuid: str):
 async def compare_scores_by_level(
     player_uuids: List[str] = Query(..., description="List of player UUIDs to compare")
 ):
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     score_data_path = base_path / "github_data/score_data.csv"
 
     level_versions = {}
@@ -996,7 +1003,7 @@ async def compare_scores_by_level(
     response_model=PlayersResponse,
 )
 async def get_players():
-    base_path = Path("/storage")
+    base_path = Path(STORAGE_PATH)
     player_data_path = base_path / "github_data/account_data.csv"
 
     players = []
