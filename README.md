@@ -1,1 +1,1 @@
-https://pew.artiekra.org
+https://pew.artiekra.org/leaderboards/monthly
