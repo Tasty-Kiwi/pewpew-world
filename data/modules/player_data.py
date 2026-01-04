@@ -8,6 +8,15 @@ from loguru import logger
 load_dotenv()
 
 
+def sort_archive_files(files):
+    def get_date_from_filename(filename):
+        parts = filename.replace(".json", "").split("_")
+        month = int(parts[-2])
+        year = int(parts[-1])
+        return datetime(year, month, 1)
+    return sorted(files, key=get_date_from_filename)
+
+
 def run():
     """Track player data changes from XP and Blitz leaderboard archives."""
     data_dir = os.getenv("STORAGE_PATH", "/storage")
@@ -28,21 +37,21 @@ def run():
 
     xp_archive_dir = os.path.join(data_dir, "xp_lb_archive")
     if os.path.exists(xp_archive_dir):
-        for filename in sorted(os.listdir(xp_archive_dir)):
-            if filename.startswith("xp_lb_") and filename.endswith(".json"):
-                filepath = os.path.join(xp_archive_dir, filename)
-                last_xp_timestamp = process_xp_archive(
-                    filepath, player_changes, last_xp_timestamp
-                )
+        files = [f for f in os.listdir(xp_archive_dir) if f.startswith("xp_lb_") and f.endswith(".json")]
+        for filepath in sort_archive_files(files):
+            filepath = os.path.join(xp_archive_dir, filepath)
+            last_xp_timestamp = process_xp_archive(
+                filepath, player_changes, last_xp_timestamp
+            )
 
     blitz_archive_dir = os.path.join(data_dir, "blitz_lb_archive")
     if os.path.exists(blitz_archive_dir):
-        for filename in sorted(os.listdir(blitz_archive_dir)):
-            if filename.startswith("blitz_lb_") and filename.endswith(".json"):
-                filepath = os.path.join(blitz_archive_dir, filename)
-                last_blitz_timestamp = process_blitz_archive(
-                    filepath, player_changes, last_blitz_timestamp
-                )
+        files = [f for f in os.listdir(blitz_archive_dir) if f.startswith("blitz_lb_") and f.endswith(".json")]
+        for filepath in sort_archive_files(files):
+            filepath = os.path.join(blitz_archive_dir, filepath)
+            last_blitz_timestamp = process_blitz_archive(
+                filepath, player_changes, last_blitz_timestamp
+            )
 
     if "_metadata" not in player_changes:
         player_changes["_metadata"] = {}
