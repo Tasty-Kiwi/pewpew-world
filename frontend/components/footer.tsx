@@ -24,6 +24,7 @@ export default function Footer() {
         </div>
 
         <div className="d-flex gap-1">
+          {/* <span className="badge bg-blue-lt text-blue-lt-fg"> */}
           created by{" "}
           <a
             href="https://artiekra.org"
@@ -34,6 +35,7 @@ export default function Footer() {
             artiekra
           </a>{" "}
           :3
+          {/* </span> */}
         </div>
       </div>
     </footer>
