@@ -18,7 +18,7 @@ Install all the python package requirements in a virtual environment:
 ```
 py -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+penter image description hereip install -r requirements.txt
 ```
 
 - Start collecting data with `py data/main.py`

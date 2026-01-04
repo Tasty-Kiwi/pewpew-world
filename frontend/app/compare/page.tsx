@@ -10,6 +10,7 @@ import ColorizedText from "@/components/colorized-text";
 import DataTable from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import dynamic from "next/dynamic";
+import Papa from "papaparse";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -98,8 +99,23 @@ function CompareContent() {
 
   useEffect(() => {
     api
-      .get("/v1/data/get_players")
-      .then((res) => setAvailablePlayers(res.data.players))
+      .get("/v1/data/get_players", { responseType: "text" })
+      .then((res) => {
+        Papa.parse(res.data, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const parsedPlayers: PlayerShortInfo[] = results.data
+              .map((row: any) => ({
+                account_id: row.account_id || row.account_ids || "",
+                username: row.username || "",
+              }))
+              .filter((p) => p.account_id && p.username);
+
+            setAvailablePlayers(parsedPlayers);
+          },
+        });
+      })
       .catch((err) => console.error("Error fetching players:", err));
   }, []);
 
@@ -180,9 +196,6 @@ function CompareContent() {
       // Group scores by value_type
       const scoresByType = new Map<number, PlayerLevelScore[]>();
 
-      // Initialize with 0 if no scores, but we iterate level.scores anyway.
-      // If level.scores is empty, we still want a row?
-      // Original logic: value_type was 0 if empty.
       if (level.scores.length === 0) {
         const row: ComparisonRow = {
           level_uuid: level.level_uuid,
@@ -365,10 +378,6 @@ function CompareContent() {
       dataLabels: {
         enabled: false,
       },
-      // fill: {
-      //   type: "solid",
-      //   opacity: 0.16,
-      // },
       stroke: {
         width: 2,
         lineCap: "round",

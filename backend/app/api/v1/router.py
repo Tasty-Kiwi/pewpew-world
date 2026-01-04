@@ -1,14 +1,14 @@
 import csv
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
-
-import os
 
 load_dotenv()
 
@@ -179,15 +179,6 @@ class LevelScoresGroup(BaseModel):
 class ComparisonResponse(BaseModel):
     players: List[str]
     levels: List[LevelScoresGroup]
-
-
-class PlayerShortInfo(BaseModel):
-    account_id: str
-    username: str
-
-
-class PlayersResponse(BaseModel):
-    players: List[PlayerShortInfo]
 
 
 @router.get(
@@ -1000,26 +991,10 @@ async def compare_scores_by_level(
     summary="Get all players",
     description="Retrieves all player data from the player-data.csv storage",
     tags=["data"],
-    response_model=PlayersResponse,
 )
-async def get_players():
+def get_players_csv() -> FileResponse:
+    """Serves the raw CSV file to the frontend."""
     base_path = Path(STORAGE_PATH)
-    player_data_path = base_path / "github_data/account_data.csv"
+    file_path = base_path / "github_data/account_data.csv"
 
-    players = []
-    try:
-        with open(player_data_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                players.append(
-                    PlayerShortInfo(
-                        account_id=row.get("account_id", row.get("account_ids", "")),
-                        username=row.get("username", ""),
-                    )
-                )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error reading player data: {str(e)}"
-        )
-
-    return PlayersResponse(players=players)
+    return FileResponse(path=file_path, filename="players.csv", media_type="text/csv")
