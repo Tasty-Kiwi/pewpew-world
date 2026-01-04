@@ -328,7 +328,7 @@ export default function PlayerProfilePage() {
         </div>
 
         <div className="row row-cards">
-          {xpHistory && xpHistory.length >= 2 ? (
+          {xpHistory && xpHistory.length >= 1 ? (
             <div className="col-md-6">
               <div className="card">
                 <div className="card-body ps-0">
@@ -363,7 +363,7 @@ export default function PlayerProfilePage() {
                         stroke: {
                           width: 2,
                           lineCap: "round",
-                          curve: "smooth",
+                          curve: "stepline",
                         },
                         tooltip: {
                           theme: "dark",
@@ -413,10 +413,16 @@ export default function PlayerProfilePage() {
                       series={[
                         {
                           name: "XP",
-                          data: xpHistory.map((h) => ({
-                            x: h.timestamp * 1000,
-                            y: h.xp,
-                          })),
+                          data: [
+                            ...xpHistory.map((h) => ({
+                              x: h.timestamp * 1000,
+                              y: h.xp,
+                            })),
+                            {
+                              x: new Date().getTime(),
+                              y: xpHistory[xpHistory.length - 1]?.xp,
+                            },
+                          ],
                         },
                       ]}
                       type="area"
@@ -444,7 +450,7 @@ export default function PlayerProfilePage() {
             </div>
           ) : null}
 
-          {blitzHistory && blitzHistory.length >= 2 ? (
+          {blitzHistory && blitzHistory.length >= 1 ? (
             <div className="col-md-6">
               <div className="card">
                 <div className="card-body ps-0">
@@ -479,7 +485,7 @@ export default function PlayerProfilePage() {
                         stroke: {
                           width: 2,
                           lineCap: "round",
-                          curve: "smooth",
+                          curve: "stepline",
                         },
                         tooltip: {
                           theme: "dark",
@@ -530,10 +536,16 @@ export default function PlayerProfilePage() {
                       series={[
                         {
                           name: "BSR",
-                          data: blitzHistory.map((h) => ({
-                            x: h.timestamp * 1000,
-                            y: h.bsr,
-                          })),
+                          data: [
+                            ...blitzHistory.map((h) => ({
+                              x: h.timestamp * 1000,
+                              y: h.bsr,
+                            })),
+                            {
+                              x: new Date().getTime(),
+                              y: blitzHistory[blitzHistory.length - 1]?.bsr,
+                            },
+                          ],
                         },
                       ]}
                       type="area"

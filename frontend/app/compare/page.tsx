@@ -319,12 +319,21 @@ function CompareContent() {
   const renderCharts = () => {
     const xpSeries = playersData.map((p) => ({
       name: stripColorCodes(p.name),
-      data: p.xpHistory.map((h) => ({ x: h.timestamp * 1000, y: h.xp })),
+      data: [
+        ...p.xpHistory.map((h) => ({ x: h.timestamp * 1000, y: h.xp })),
+        { x: new Date().getTime(), y: p.xpHistory[p.xpHistory.length - 1]?.xp },
+      ],
     }));
 
     const blitzSeries = playersData.map((p) => ({
       name: stripColorCodes(p.name),
-      data: p.blitzHistory.map((h) => ({ x: h.timestamp * 1000, y: h.bsr })),
+      data: [
+        ...p.blitzHistory.map((h) => ({ x: h.timestamp * 1000, y: h.bsr })),
+        {
+          x: new Date().getTime(),
+          y: p.blitzHistory[p.blitzHistory.length - 1]?.bsr,
+        },
+      ],
     }));
 
     const CHART_COLORS = [
@@ -363,7 +372,7 @@ function CompareContent() {
       stroke: {
         width: 2,
         lineCap: "round",
-        curve: "smooth",
+        curve: "stepline",
       },
       tooltip: {
         theme: "dark",
@@ -506,7 +515,7 @@ function CompareContent() {
 
           // Determine color
           let color = "inherit";
-          if (playersData.length >= 2) {
+          if (playersData.length >= 1) {
             const scores = playersData
               .map((pl) => row.original[pl.uuid]?.score)
               .filter((s) => s !== undefined);
@@ -663,7 +672,7 @@ function CompareContent() {
             {addingPlayer && (
               <div
                 className="dropdown-menu dropdown-menu-end dropdown-menu-card show"
-                style={{ width: "350px", right: 0, left: "auto" }}
+                style={{ right: 0, left: "auto" }}
               >
                 <div className="card">
                   <div className="card-body">
