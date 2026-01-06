@@ -11,6 +11,7 @@ import {
   IconMoon,
 } from "@tabler/icons-react";
 import { useTheme } from "@/components/theme-provider";
+import GlobalSearch from "@/components/global-search";
 
 interface NavItem {
   label: string;
@@ -116,7 +117,12 @@ export default function Navbar() {
           </Link>
         </h1>
 
-        {/* 3. Theme Switcher (Right on Mobile, pushed to End on Desktop via order-md-last) */}
+        {/* 3. Global Search (Desktop only, to the left of theme switcher) */}
+        <div className="d-none d-md-block ms-3" style={{ minWidth: "300px" }}>
+          <GlobalSearch />
+        </div>
+
+        {/* 4. Theme Switcher (Right on Mobile, pushed to End on Desktop via order-md-last) */}
         <button
           className="btn btn-icon nav-link order-md-last"
           onClick={toggleTheme}
@@ -181,6 +187,9 @@ export default function Navbar() {
                 </li>
               ))}
             </ul>
+            <div className="mt-3 d-md-none">
+              <GlobalSearch />
+            </div>
           </div>
         </div>
       </div>

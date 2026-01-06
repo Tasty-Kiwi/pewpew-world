@@ -1,5 +1,4 @@
 import LeaderboardExtract from "@/components/leaderboard-extract";
-import GlobalSearch from "@/components/global-search";
 
 export default function Home() {
   return (
@@ -7,9 +6,6 @@ export default function Home() {
       <div className="row align-items-center mb-4">
         <div className="col">
           <h2 className="page-title">PewPew World ✨</h2>
-        </div>
-        <div className="col-auto" style={{ minWidth: "300px" }}>
-          <GlobalSearch />
         </div>
       </div>
 
